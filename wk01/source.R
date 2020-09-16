@@ -2,6 +2,7 @@
 library(tidyverse)
 library(readr)
 library(readxl)
+library(tidytext)
 # installed.packages()
 # set directory
-# setwd("C://Users//Public//Dropbox//My PC (LAPTOP-AUCK3O88)//Documents//RStudio-Mentor-Proj")
+# setwd("C:\Users\Public\User Documents\Documents\RStudio-NCSU")
