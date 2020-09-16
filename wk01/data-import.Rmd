@@ -4,36 +4,43 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-source('~/RStudio-Mentor-Proj/wk01/source.R')
+knitr::opts_chunk$set(echo = FALSE)
+source('~/RStudio-NCSU/wk01/source.R')
 ```
 
-## R Markdown
-What do these datasets look ike?
+## read datasets
+What do our datasets look like?
 ```{r read in data}
 # full_d for the full dialog, not annotated
-full_d = read_csv('~/RStudio-Mentor-Proj/data/FullData/full_dialog.csv',
+full_d = read_csv('~/RStudio-NCSU/data/FullData/full_dialog.csv',
          col_names = T)
-colnames(full_d)
-full_d %>% relocate(B2,B4)
+full_d %>% 
+  relocate(B2,B4) %>% 
 # full_i for the corresponding index file
-full_i = read_csv('~/RStudio-Mentor-Proj/data/FullData/full_info.csv',
+  head()
+
+full_i = read_csv('~/RStudio-NCSU/data/FullData/full_info.csv',
          col_names = T)
 str(full_i)
 
-# ann_d for the full dialog, with annotations
-ann_d = read_xlsx('~/RStudio-Mentor-Proj/data/AnnotatedData/300_dialog.xlsx',
-         col_names = T)
-# ann_i for the corresponding index file
-ann_i = read_xlsx('~/RStudio-Mentor-Proj/data/AnnotatedData/300_info.xlsx',
-         col_names = T)
+# THESE VARIABLES COULD BE FACTOR as.factor(sex.x,race.x,edu.x,marital.x,employment.x,religion.x,ideology.x)
 
+#as.factor(,ordered = F)
+# ann_d for the full dialog, with annotations
+ann_d = read_xlsx('~/RStudio-NCSU/data/AnnotatedData/300_dialog.xlsx',
+         col_names = T)
+head(ann_d)
+# ann_i for the corresponding index file
+ann_i = read_xlsx('~/RStudio-NCSU/data/AnnotatedData/300_info.xlsx',
+         col_names = T)
+head(ann_i)
 ```
 
-## Including Plots
+## cleaning
 
-You can also embed plots, for example:
+## tidyr
 
+What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R  
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```

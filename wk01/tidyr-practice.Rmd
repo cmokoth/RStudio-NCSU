@@ -1,0 +1,27 @@
+---
+title: "Practice with tidyr"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('~/RStudio-NCSU/wk01/source.R')
+```
+
+## Looking at Chapter 1
+
+As the specific form of the Persuasion datasets is currently unknown, I practice here alongside Silge's Text Mining With R. 
+```{r datasets}
+# read in 'text'
+text <- c("Because I could not stop for Death -",
+          "He kindly stopped for me -",
+          "The Carriage held but just Ourselves -",
+          "and Immortality")
+
+text
+
+text_df <- tibble(line = 1:4, text = text)
+
+text_df
+```
+
