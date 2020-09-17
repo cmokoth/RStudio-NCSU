@@ -5,34 +5,35 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-source('~/RStudio-NCSU/wk01/source.R')
+# relative path ref
+source('wk01/source.R')
 ```
 
 ## read datasets
 What do our datasets look like?
 ```{r read in data}
 # full_d for the full dialog, not annotated
-full_d = read_csv('~/RStudio-NCSU/data/FullData/full_dialog.csv',
-         col_names = T)
+full_d = read_csv('data/FullData/full_dialog.csv',
+         col_names = TRUE)
 full_d %>% 
-  relocate(B2,B4) %>% 
+  relocate(B2,B4,Turn) %>% 
 # full_i for the corresponding index file
   head()
 
-full_i = read_csv('~/RStudio-NCSU/data/FullData/full_info.csv',
-         col_names = T)
+full_i = read_csv('data/FullData/full_info.csv',
+         col_names = TRUE)
 str(full_i)
 
-# THESE VARIABLES COULD BE FACTOR as.factor(sex.x,race.x,edu.x,marital.x,employment.x,religion.x,ideology.x)
+# THESE VARIABLES COULD BE FACTOR: as.factor(sex.x,race.x,edu.x,marital.x,employment.x,religion.x,ideology.x)
 
 #as.factor(,ordered = F)
 # ann_d for the full dialog, with annotations
-ann_d = read_xlsx('~/RStudio-NCSU/data/AnnotatedData/300_dialog.xlsx',
-         col_names = T)
+ann_d = read_xlsx('data/AnnotatedData/300_dialog.xlsx',
+         col_names = TRUE)
 head(ann_d)
 # ann_i for the corresponding index file
-ann_i = read_xlsx('~/RStudio-NCSU/data/AnnotatedData/300_info.xlsx',
-         col_names = T)
+ann_i = read_xlsx('data/AnnotatedData/300_info.xlsx',
+         col_names = TRUE)
 head(ann_i)
 ```
 
@@ -42,7 +43,7 @@ head(ann_i)
 
 What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R  
 ```{r pressure, echo=FALSE}
-plot(pressure)
+# plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

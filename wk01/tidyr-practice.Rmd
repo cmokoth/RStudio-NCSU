@@ -24,4 +24,8 @@ text_df <- tibble(line = 1:4, text = text)
 
 text_df
 ```
+Now to go from lines to words (for tidy text method, each word is a token. In Persuasion, they examine each sentence as a token)
+```{r}
+unnest_tokens(words,text)
+```
 
