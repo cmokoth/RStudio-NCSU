@@ -18,17 +18,18 @@ full_d_raw = read_csv('data/FullData/full_dialog.csv',
 
 full_i_raw = read_csv('data/FullData/full_info.csv',
          col_names = TRUE)
-
+str(full_i_raw)
 fullset = full_d_raw %>% 
   left_join(full_i_raw) %>% 
   select(
     ConvoId = B2,
     Turn = Turn,
-    Role = B4, # (0 means persuader, 1 means persuadee)
+    Role = B4, # (0 = persuader, 1 = persuadee)
     Dialogue = Unit,
     User = B3,
+    NumTurn = B7,
     Donation = B6,
-    NumTurn = B7
+    everything()
     )
 
 # there were some really cool functions Julia used to clean up the data. One for smushing the two colums in the annotated set together, and one to get rid of the ".x" on the end of the identity variables. and a very cool funtion for looking at summary things
@@ -57,7 +58,8 @@ annset = ann_d_raw %>%
 #     Label2 = # concat(er_label_2,ee_label_2),
 #     Neg = neg,
 #     Neu = neu,
-#     Pos = pos
+#     Pos = pos,
+#     everything()
 #   )
 
 # annset = ann_d %>% select()
@@ -72,7 +74,16 @@ annset = ann_d_raw %>%
 What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R  
 ```{r pressure, echo=FALSE}
 
-
-
+fulltidy = fullset %>% 
+  select(ConvoId,
+         User,
+         Turn,
+         Role,
+         Dialogue) 
+# putting the words in un_nest
+fulltidy = full_d_raw %>% 
+  unnest_tokens(Word,Unit) %>% 
+  # pulling out irrelevant words
+  anti_join(stop_words,by = c("Word" = "word"))
 
 ```
