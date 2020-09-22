@@ -13,11 +13,9 @@ What's in our data? Let's take a look through some plots.
 
 ```{r cars}
 colnames(fulltidy)
-count(distinct(fulltidy))
-distinct(fulltidy$Word)
-fulltidy %>% 
-  ggplot(aes(distinct_(fulltidy))) +
-  geom_bar()
+fulltidy %>% count(Word, sort = TRUE) %>% 
+  ggplot(aes(word,n)) +
+  geom_col()
 ```
 
 ## Including Plots

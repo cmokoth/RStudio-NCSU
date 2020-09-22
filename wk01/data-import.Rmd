@@ -84,6 +84,8 @@ fulltidy = fullset %>%
 fulltidy = full_d_raw %>% 
   unnest_tokens(Word,Unit) %>% 
   # pulling out irrelevant words
-  anti_join(stop_words,by = c("Word" = "word"))
+  anti_join(stop_words,by = c("Word" = "word")) %>% 
+  rename(ConvoId = B2,
+        Role = B4) # (0 = persuader, 1 = persuadee)
 
 ```
