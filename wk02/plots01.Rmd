@@ -5,25 +5,162 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# keeping track of the code that each script requires! Reproducible
+source("wk01/data-import.Rmd")
 ```
 
 ## Exploratory Analysis
 
 What's in our data? Let's take a look through some plots.
 
-```{r cars}
+```{r fulltidy plots}
 colnames(fulltidy)
+# looking at individual sentences/instances
+fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
+# most poppular words
 fulltidy %>% count(Word, sort = TRUE) %>% 
-  ggplot(aes(word,n)) +
-  geom_col()
+  filter(n > 1000) %>% 
+  ggplot(aes(fct_reorder(Word, n),n)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = NULL)
+
+# least popular words sample_n(), slice()
+fulltidy %>% count(Word, sort = TRUE) %>%
+```
+
+
+```{r fulltidy plots}
+filter(n < 500)
+# zipf's law = nl follows log scale, log-log plot w/ rank?
+
+
+fulltidy %>% count(Word, sort = TRUE) %>% 
+  filter(n > 500) %>% 
+  ggplot(aes(Word,n)) +
+  geom_col() +
+  coord_flip()
+
+####Bar Charts (n) By Role####
+par(mfrow=c(1,2))
+
+fulltidy %>% 
+  filter(Role == 1) %>% 
+  count(Word, sort = TRUE) %>% 
+  filter(n > 200) %>% 
+  ggplot(aes(Word,n)) +
+  geom_col(aes(color = n)) +
+#  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+  labs(x = NULL, title = "Words: Persuadee") +
+  coord_flip()
+
+fulltidy %>% 
+  filter(Role == 0) %>% 
+  count(Word, sort = TRUE) %>% 
+  filter(n > 500) %>% 
+  ggplot(aes(Word,n)) +
+  geom_col(aes(color = n)) +
+#  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+  labs(x = NULL, title = "Words: Persuader") +
+  coord_flip()
+par(mfrow=c(1,1))
+
+#####Bar Charts (n/sum(n) by Role####
+# proportional, persuadee bar
+fulltidy %>% 
+  filter(Role == 1) %>% 
+  count(Word, sort = TRUE) %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  ggplot(aes(Word,proportion)) +
+  geom_jitter(aes(color = n)) +
+  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+  labs(x = NULL, title = "Words: Persuadee") +
+  coord_flip()
+
+# proportional, persuader bar
+fulltidy %>% 
+  filter(Role == 0) %>% 
+  count(Word, sort = TRUE) %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  ggplot(aes(Word,proportion)) +
+  geom_jitter(aes(color = n)) +
+  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+  labs(x = NULL, title = "Words: Persuader") +
+  coord_flip()
+
 ```
 
 ## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r annset plots, echo=FALSE}
+# plot multiple things against actual donation
+# plot of actual donation v stated donation
+annset %>% 
+#  filter(IntDonation < 5000) %>% 
+  ggplot() +
+  geom_boxplot(aes(IntDonation))
+annset %>% 
+  ggplot() +
+  geom_boxplot(aes(Donation))
+
+annset %>% 
+  #difference between IntDonation and Donation
+  filter(IntDonation < 75) %>% 
+  ggplot(aes(Donation-IntDonation)) +
+  geom_histogram(binwidth = 10)
+```
+There are two outliers with respect to x, one where someone promise to donate \$10,000 but didn't, and another where someone promised to donate \$500 and didn't.
+```{r fullset plots, echo=FALSE}
+# distributions for each personality trait (one of those bar plots that is stacked/filled)
+
+# utterances per conversation
+fullset %>% 
+  count(ConvoId) %>% 
+  ggplot(aes(n)) +
+  geom_histogram()
+
+full_i_raw %>% 
+  select(B3,fairness:self_direction) %>% 
+  pivot_longer(fairness:self_direction,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 6, show.legend = FALSE)
+
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = ideology)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~edu,scales = "free")
+
+# one (or more) similar plots with other info
+# more exploratory plots
+
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(edu,n,fill = ideology)) +
+  geom_col()
+
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(edu,n,fill = ideology)) +
+  geom_col(position = "dodge")
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## More Plots!
+```{r other plots}
+# plots for frequency of (top) words and donation amount
+# top words by personality trait and role
+```
+

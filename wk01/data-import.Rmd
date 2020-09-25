@@ -17,8 +17,10 @@ full_d_raw = read_csv('data/FullData/full_dialog.csv',
          col_names = TRUE)
 
 full_i_raw = read_csv('data/FullData/full_info.csv',
-         col_names = TRUE)
-str(full_i_raw)
+         col_names = TRUE) %>% 
+  rename_with(~str_remove(.,"\\.x$"))
+# anonymous fn ? regular expression (pyton/perl/real programming)
+
 fullset = full_d_raw %>% 
   left_join(full_i_raw) %>% 
   select(
@@ -43,24 +45,23 @@ ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
          col_names = TRUE)
 
 annset = ann_d_raw %>% 
-  left_join(ann_i_raw) 
-# %>% 
-#   select(
-#     ConvoId = B2,
-#     Turn = Turn,
-#     Role = B4, # (0 means persuader, 1 means persuadee)
-#     Sentence = Unit,
-#     User = B3,
-#     Donation = B6,
-#     NumTurn = B7,
-#     IntDonation = B5,
-#     Label1 = # concat(er_label_1,ee_label_1),
-#     Label2 = # concat(er_label_2,ee_label_2),
-#     Neg = neg,
-#     Neu = neu,
-#     Pos = pos,
-#     everything()
-#   )
+  left_join(ann_i_raw) %>%
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 means persuader, 1 means persuadee)
+    Sentence = Unit,
+    User = B3,
+    Donation = B6,
+    IntDonation = B5,
+    NumTurn = B7,
+    # Label1 = # concat(er_label_1,ee_label_1),
+    # Label2 = # concat(er_label_2,ee_label_2),
+    Neg = neg,
+    Neu = neu,
+    Pos = pos,
+    everything()
+  )
 
 # annset = ann_d %>% select()
 
@@ -84,7 +85,7 @@ fulltidy = fullset %>%
 fulltidy = full_d_raw %>% 
   unnest_tokens(Word,Unit) %>% 
   # pulling out irrelevant words
-  anti_join(stop_words,by = c("Word" = "word")) %>% 
+  anti_join(get_stopwords(),by = c("Word" = "word")) %>% 
   rename(ConvoId = B2,
         Role = B4) # (0 = persuader, 1 = persuadee)
 
