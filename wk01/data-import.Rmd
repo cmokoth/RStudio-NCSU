@@ -34,6 +34,13 @@ fullset = full_d_raw %>%
     everything()
     )
 
+full_d_raw = full_d_raw %>% 
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 = persuader, 1 = persuadee)
+    Dialogue = Unit
+  )
 # there were some really cool functions Julia used to clean up the data. One for smushing the two colums in the annotated set together, and one to get rid of the ".x" on the end of the identity variables. and a very cool funtion for looking at summary things
 
 

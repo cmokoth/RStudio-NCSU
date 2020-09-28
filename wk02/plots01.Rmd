@@ -15,18 +15,15 @@ What's in our data? Let's take a look through some plots.
 
 ```{r fulltidy plots}
 colnames(fulltidy)
-# looking at individual sentences/instances
+# looking at individual sentences/instances to look at how standard the data are
 fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
-# most poppular words
+# most popular words
 fulltidy %>% count(Word, sort = TRUE) %>% 
   filter(n > 1000) %>% 
   ggplot(aes(fct_reorder(Word, n),n)) +
   geom_col() +
   coord_flip() +
   labs(x = NULL)
-
-# least popular words sample_n(), slice()
-fulltidy %>% count(Word, sort = TRUE) %>%
 ```
 
 

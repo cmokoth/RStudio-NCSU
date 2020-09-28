@@ -1,0 +1,26 @@
+---
+title: "Zipf's Law"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("wk01/data-import.Rmd")
+```
+
+## Zipf's Law
+Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
+```{r}
+# two group by, one by conversation and one by total words in the sample
+words1 = full_d_raw %>% 
+  unnest_tokens(word,Unit)
+  count(B2,Word,sort = TRUE)
+
+words2 = words1 %>% 
+  group_by(B2) %>% 
+  summarize(ctotal = sum(n))
+  
+
+wordcount <- left_join(words1, words2)
+```
+
