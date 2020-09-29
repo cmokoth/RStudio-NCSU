@@ -5,22 +5,123 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-source("wk01/data-import.Rmd")
+
+source('wk01/data-import.Rmd')
+
 ```
 
 ## Zipf's Law
 Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
 ```{r}
 # two group by, one by conversation and one by total words in the sample
-words1 = full_d_raw %>% 
-  unnest_tokens(word,Unit)
-  count(B2,Word,sort = TRUE)
+words1 = fullset %>% 
+  select(ConvoId,
+         Dialogue,
+         NumTurn
+        ) %>% 
+  unnest_tokens(Word,Dialogue) %>% 
+  count(ConvoId,Word,sort = TRUE, name = "Count")
 
 words2 = words1 %>% 
-  group_by(B2) %>% 
-  summarize(ctotal = sum(n))
-  
+  group_by(ConvoId) %>% 
+  summarize(ctotal = sum(Count))
 
 wordcount <- left_join(words1, words2)
+
+#############
+# group by role and by total words in the sample
+# words11 = fullset %>% 
+#   select(ConvoId,
+#          Dialogue,
+#          NumTurn
+#         ) %>% 
+#   unnest_tokens(Word,Dialogue) %>% 
+#   count(Word,sort = TRUE, name = "Count")
+# 
+# words22 = words11 %>% 
+#   summarize(ctotal = sum(Count))
+# 
+# wordcount1 <- left_join(words11, words22)
+# 
+# these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
+# two group by, one by number of turns and one by total words in the sample
+words111 = fullset %>% 
+  select(ConvoId,
+         Dialogue,
+         NumTurn
+        ) %>% 
+  unnest_tokens(Word,Dialogue) %>% 
+  count(NumTurn,Word,sort = TRUE, name = "Count")
+
+words222 = words111 %>% 
+  group_by(NumTurn) %>% 
+  summarize(ctotal = sum(Count))
+
+wordcount2 <- left_join(words111, words222)
+
+
+```
+
+What do the distributions of the words look like compared to their conversation?
+```{r}
+# plot 
+wordcount %>% 
+  ggplot(aes(Count/ctotal)) +
+  geom_histogram()
+
+wordcount2 %>% 
+  ggplot(aes(Count/ctotal)) +
+  geom_histogram()
+
+wordcount2 %>% 
+  ggplot(aes(Count/ctotal, fill = as.factor(NumTurn))) +
+  geom_histogram(show.legend = FALSE) +
+  xlim(NA, 0.0009) +
+  facet_wrap(~NumTurn, ncol = 2, scales = "free_y")
+wordcount2 %>% # to look at the number of values in each factor
+  ggplot(aes(NumTurn)) + 
+  geom_histogram()
+summary(as.factor(fullset$NumTurn))
+
+freq_by_rank <- wordcount %>% 
+  group_by(ConvoId) %>% 
+  mutate(rank = row_number(), 
+         `term frequency` = Count/ctotal)
+
+freq_by_rank2 <- wordcount2 %>% 
+  group_by(NumTurn) %>% 
+  mutate(rank = row_number(), 
+         `term frequency` = Count/ctotal)
+
+# Zipf's law plot - group by ConvoId
+freq_by_rank %>% 
+  ggplot(aes(rank, `term frequency`, color = ConvoId)) + 
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10()
+# extremely noisy! not improved by removing 'color = '
+
+# Zipf's law plot - group by NumTurn
+freq_by_rank2 %>% 
+  ggplot(aes(rank, `term frequency`, color = as.factor(NumTurn))) + 
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10()
+
+
+```
+
+```{r}
+rank_subset = freq_by_rank %>% 
+  filter(rank < 100, # what would be the middle range of this data?
+         rank > 5)
+
+lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
+
+rank_subset2 <- freq_by_rank2 %>% 
+  filter(rank < 1000,
+         rank > 10)
+
+lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
 ```
 
