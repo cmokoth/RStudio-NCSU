@@ -3,7 +3,7 @@ title: "Zipf's Law"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, child=c('wk01/data-import.Rmd','wk02/plots01.Rmd)}
 knitr::opts_chunk$set(echo = TRUE)
 
 source('wk01/data-import.Rmd')
@@ -12,7 +12,8 @@ source('wk01/data-import.Rmd')
 
 ## Zipf's Law
 Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
-```{r}
+```{r wordcount}
+############## Group = ConvoId #########
 # two group by, one by conversation and one by total words in the sample
 words1 = fullset %>% 
   select(ConvoId,
@@ -28,7 +29,7 @@ words2 = words1 %>%
 
 wordcount <- left_join(words1, words2)
 
-#############
+############# Group = Role #######
 # group by role and by total words in the sample
 # words11 = fullset %>% 
 #   select(ConvoId,
@@ -44,6 +45,8 @@ wordcount <- left_join(words1, words2)
 # wordcount1 <- left_join(words11, words22)
 # 
 # these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
+
+####### Group = NumSet ######
 # two group by, one by number of turns and one by total words in the sample
 words111 = fullset %>% 
   select(ConvoId,
@@ -63,7 +66,7 @@ wordcount2 <- left_join(words111, words222)
 ```
 
 What do the distributions of the words look like compared to their conversation?
-```{r}
+```{r frequency by rank}
 # plot 
 wordcount %>% 
   ggplot(aes(Count/ctotal)) +
@@ -87,11 +90,14 @@ freq_by_rank <- wordcount %>%
   group_by(ConvoId) %>% 
   mutate(rank = row_number(), 
          `term frequency` = Count/ctotal)
+summary(freq_by_rank)
+
 
 freq_by_rank2 <- wordcount2 %>% 
   group_by(NumTurn) %>% 
   mutate(rank = row_number(), 
          `term frequency` = Count/ctotal)
+summary(log10(freq_by_rank2[6]))
 
 # Zipf's law plot - group by ConvoId
 freq_by_rank %>% 
@@ -108,10 +114,11 @@ freq_by_rank2 %>%
   scale_x_log10() +
   scale_y_log10()
 
+# only seven groups rather than 1,000
 
 ```
 
-```{r}
+```{r zipf's law}
 rank_subset = freq_by_rank %>% 
   filter(rank < 100, # what would be the middle range of this data?
          rank > 5)
@@ -123,5 +130,13 @@ rank_subset2 <- freq_by_rank2 %>%
          rank > 10)
 
 lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
+```
+
+```{r tf_idf}
+wordcount = wordcount %>% 
+  bind_tf_idf()
+
+wordcount2= wordcount2 %>% 
+  bind_tf_idf()
 ```
 

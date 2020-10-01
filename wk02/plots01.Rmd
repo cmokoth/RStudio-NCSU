@@ -3,10 +3,9 @@ title: "Taking A Look"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, child='wk01/data-import.Rmd'}
 knitr::opts_chunk$set(echo = TRUE)
 # keeping track of the code that each script requires! Reproducible
-source("wk01/data-import.Rmd")
 ```
 
 ## Exploratory Analysis
@@ -117,13 +116,49 @@ fullset %>%
   ggplot(aes(n)) +
   geom_histogram()
 
+# the big five [extrovert, agreeable, conscientious, neurotic, open]
 full_i_raw %>% 
-  select(B3,fairness:self_direction) %>% 
-  pivot_longer(fairness:self_direction,names_to = "trait", values_to = "score") %>% 
+  select(B3,extrovert:open) %>% 
+  pivot_longer(extrovert:open,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 5, show.legend = FALSE)
+
+# the moral foundations [extrovert, agreeable, conscientious, neurotic, open]
+full_i_raw %>% 
+  select(B3,care:freedom) %>% 
+  pivot_longer(care:freedom,names_to = "trait", values_to = "score") %>% 
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
 
+# the Schwartz Portrait [extrovert, agreeable, conscientious, neurotic, open]
+full_i_raw %>% 
+  select(B3,conform:security) %>% 
+  pivot_longer(conform:security,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 6, show.legend = FALSE)
+
+# the decision making style [extrovert, agreeable, conscientious, neurotic, open]
+full_i_raw %>% 
+  select(B3,rational:intuitive) %>% 
+  pivot_longer(rational:intuitive,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 5, show.legend = FALSE)
+
+# # 10 baby plots of value plots
+# full_i_raw %>% 
+#   select(B3,fairness:self_direction) %>% 
+#   pivot_longer(fairness:self_direction,names_to = "trait", values_to = "score") %>% 
+#   ggplot(aes(score, fill = trait)) +
+#   facet_wrap(~trait) +
+#   geom_histogram(bins = 6, show.legend = FALSE)
+
+
+
+# 3 barcharts for education/ideology
 full_i_raw %>% 
   count(edu,ideology) %>% 
   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
@@ -135,15 +170,36 @@ full_i_raw %>%
 
 # one (or more) similar plots with other info
 # more exploratory plots
+# wrap race age X income 
+full_i_raw %>% 
+  filter(!is.na(age),!is.na(income)) %>% 
+  ggplot(aes(age,income)) +
+  geom_jitter() +
+  facet_wrap(~race) 
+  
 
+# wrap race age X income
+full_i_raw %>% 
+  filter(!is.na(age),!is.na(income)) %>% 
+  ggplot(aes(age,income)) +
+  geom_jitter() +
+  facet_wrap(~edu)
+
+# wrap race age X income
+ggplot(aes(age,income)) +
+  geom_jitter() +
+  facet_wrap(~marital)
+
+# stacked barchart education/ideology
 full_i_raw %>% 
   count(edu,ideology) %>% 
   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-  # reoder education levels
+  # reorder education levels
   filter(!is.na(edu), !is.na(ideology)) %>% 
   ggplot(aes(edu,n,fill = ideology)) +
   geom_col()
 
+# dodge barchart education/ideology
 full_i_raw %>% 
   count(edu,ideology) %>% 
   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
@@ -152,12 +208,31 @@ full_i_raw %>%
   ggplot(aes(edu,n,fill = ideology)) +
   geom_col(position = "dodge")
 
+# dodge barchart religion/ideology
+full_i_raw %>% 
+  count(religion,ideology) %>% 
+  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  # reoder education levels
+  filter(!is.na(religion), !is.na(ideology)) %>% 
+  ggplot(aes(religion,n,fill = ideology)) +
+  geom_col(position = "dodge")
+
+full_i_raw %>% 
+  count(religion,ideology) %>% 
+  mutate(religion = as.factor(religion)) %>% 
+  # reoder education levels
+  filter(!is.na(religion), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = religion)) +
+  geom_col(position = "dodge")
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ## More Plots!
 ```{r other plots}
 # plots for frequency of (top) words and donation amount
+
 # top words by personality trait and role
+
+
 ```
 
