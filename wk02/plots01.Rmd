@@ -3,7 +3,7 @@ title: "Taking A Look"
 output: html_document
 ---
 
-```{r setup, include=FALSE, child='wk01/data-import.Rmd'}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # keeping track of the code that each script requires! Reproducible
 ```

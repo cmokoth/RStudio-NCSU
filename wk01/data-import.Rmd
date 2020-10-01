@@ -3,7 +3,7 @@ title: "Import the Data"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, child=c('wk02/plots01.Rmd','wk03/plots02.Rmd')}
 knitr::opts_chunk$set(echo = FALSE)
 # relative path ref
 source('wk01/source.R')

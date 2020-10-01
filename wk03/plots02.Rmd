@@ -3,8 +3,9 @@ title: "Zipf's Law"
 output: html_document
 ---
 
-```{r setup, include=FALSE, child=c('wk01/data-import.Rmd','wk02/plots01.Rmd)}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+source('wk01/source.R')
 ```
 
 ## Zipf's Law
@@ -131,9 +132,9 @@ lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
 
 ```{r tf_idf}
 wordcount = wordcount %>% 
-  bind_tf_idf()
+  bind_tf_idf(Word,ConvoId,n)
 
 wordcount2= wordcount2 %>% 
-  bind_tf_idf()
+  bind_tf_idf(Word,NumTurn,n)
 ```
 
