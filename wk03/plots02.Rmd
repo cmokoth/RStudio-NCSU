@@ -5,9 +5,6 @@ output: html_document
 
 ```{r setup, include=FALSE, child=c('wk01/data-import.Rmd','wk02/plots01.Rmd)}
 knitr::opts_chunk$set(echo = TRUE)
-
-source('wk01/data-import.Rmd')
-
 ```
 
 ## Zipf's Law
