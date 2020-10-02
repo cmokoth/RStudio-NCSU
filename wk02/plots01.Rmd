@@ -5,6 +5,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
 # keeping track of the code that each script requires! Reproducible
 ```
 
@@ -230,9 +232,11 @@ full_i_raw %>%
 ## More Plots!
 ```{r other plots}
 # plots for frequency of (top) words and donation amount
+# have to use the id_tdf words to organize by top words that ISN'T a stop word
+
 
 # top words by personality trait and role
-
+# have to use the id_tdf words to organize by top words that ISN'T a stop word
 
 ```
 

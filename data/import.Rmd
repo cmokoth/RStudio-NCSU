@@ -3,10 +3,8 @@ title: "Import the Data"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
-knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
-
+```{r read, echo=FALSE, message=FALSE}
+# library
 library(tidyverse)
 library(readxl)
 library(tidytext)
@@ -14,13 +12,7 @@ library(broom)
 library(stopwords)
 library(dplyr)
 library(skimr)
-# relative path ref
-# source('wk01/source.R')
-```
 
-## read datasets
-What do our datasets look like?
-```{r read in data}
 # full_d for the full dialog, not annotated
 full_d_raw = read_csv('data/FullData/full_dialog.csv',
          col_names = TRUE)
@@ -84,10 +76,9 @@ annset = ann_d_raw %>%
 
 ```
 
-## tidyr
 
-What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
-```{r pressure, echo=FALSE}
+```{r tidyer, echo=FALSE, message=FALSE}
+# What can we do with tidyr? Here are some transformations from chapter 1 of Silges Text Mining With R to make token per row data. 
 
 fulltidy = fullset %>% 
   select(ConvoId,
@@ -97,10 +88,8 @@ fulltidy = fullset %>%
          Dialogue) 
 # putting the words in un_nest
 fulltidy = full_d_raw %>% 
-  unnest_tokens(Word,Unit) %>% 
+  unnest_tokens(Word,Dialogue) %>% 
   # pulling out irrelevant words
-  anti_join(get_stopwords(),by = c("Word" = "word")) %>% 
-  rename(ConvoId = B2,
-        Role = B4) # (0 = persuader, 1 = persuadee)
+  anti_join(get_stopwords(),by = c("Word" = "word"))
 
 ```

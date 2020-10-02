@@ -1,0 +1,20 @@
+---
+title: "analyze_text"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+```
+
+```{r import, child='../data/import.Rmd'}
+
+```
+
+Week four!
+```{r}
+fullset
+```
+
