@@ -9,16 +9,15 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ```
 
-```{r import, child='../data/import.Rmd'}
+```{r import, child=c('../data/import.Rmd','../wk03/plots02.Rmd')}
 
 ```
 
 Week four!
 ```{r tf_idf}
-wordcount = wordcount %>% 
-  bind_tf_idf(Word,ConvoId,n)
+tf_idf1 = freq_by_rank1 %>% 
+  bind_tf_idf(Word,rank,Count)
 
-wordcount2= wordcount2 %>% 
-  bind_tf_idf(Word,NumTurn,n)
+tf_idf1
 ```
 

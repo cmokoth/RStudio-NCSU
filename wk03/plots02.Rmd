@@ -38,7 +38,7 @@ wordcount <- left_join(words1, words2)
 
 ############# Group = Corpus #######
 # group by total words in the sample
-words11 = fullset %>%
+wordcount1 = fullset %>%
   select(ConvoId,
          Dialogue,
          NumTurn
@@ -46,10 +46,10 @@ words11 = fullset %>%
   unnest_tokens(Word,Dialogue) %>%
   count(Word,sort = TRUE, name = "Count")
 
-words22 = words11 %>%
-  summarize(ctotal = sum(Count))
-
-wordcount1 <- left_join(words11, words22)
+# words22 = words11 %>%
+#   summarize(ctotal = sum(Count))
+# 
+# wordcount1 <- left_join(words11, words22)
 
 # these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
 
@@ -82,7 +82,7 @@ wordcount %>%
   labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words')
 
 ###########Corpus#####
-words11 %>% 
+wordcount1 %>% 
   ggplot(aes(Count)) +
   geom_histogram(bins = 20) +
   scale_x_log10() +
@@ -116,7 +116,7 @@ words11 %>%
 #          `term frequency` = Count/ctotal)
 # summary(freq_by_rank)
 
-freq_by_rank1 <- words11 %>% 
+freq_by_rank1 <- wordcount1 %>% 
   mutate(rank = row_number(),
          `term frequency` = Count)
 summary(freq_by_rank1)
