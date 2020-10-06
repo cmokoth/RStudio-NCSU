@@ -10,6 +10,10 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 # keeping track of the code that each script requires! Reproducible
 ```
 
+```{r import, child='../data/import.Rmd'}
+
+```
+
 ## Exploratory Analysis
 
 What's in our data? Let's take a look through some plots.

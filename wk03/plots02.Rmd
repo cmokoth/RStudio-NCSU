@@ -11,7 +11,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
 
-```{r data-import, child='../wk01/data-import.Rmd'}
+```{r import, child='../data/import.Rmd'}
 
 ```
 
@@ -36,8 +36,8 @@ words2 = words1 %>%
 
 wordcount <- left_join(words1, words2)
 
-############# Group = Role #######
-# group by role and by total words in the sample
+############# Group = Corpus #######
+# group by total words in the sample
 words11 = fullset %>%
   select(ConvoId,
          Dialogue,
@@ -53,80 +53,87 @@ wordcount1 <- left_join(words11, words22)
 
 # these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
 
-####### Group = NumSet ######
-# two group by, one by number of turns and one by total words in the sample
-words111 = fullset %>% 
-  select(ConvoId,
-         Dialogue,
-         NumTurn
-        ) %>% 
-  unnest_tokens(Word,Dialogue) %>% 
-  count(NumTurn,Word,sort = TRUE, name = "Count")
-
-words222 = words111 %>% 
-  group_by(NumTurn) %>% 
-  summarize(ctotal = sum(Count))
-
-wordcount2 <- left_join(words111, words222)
-
+# ####### Group = NumSet ######
+# # two group by, one by number of turns and one by total words in the sample
+# words111 = fullset %>% 
+#   select(ConvoId,
+#          Dialogue,
+#          NumTurn
+#         ) %>% 
+#   unnest_tokens(Word,Dialogue) %>% 
+#   count(NumTurn,Word,sort = TRUE, name = "Count")
+# 
+# words222 = words111 %>% 
+#   group_by(NumTurn) %>% 
+#   summarize(ctotal = sum(Count))
+# 
+# wordcount2 <- left_join(words111, words222)
 
 ```
 
 
 
 What do the distributions of the words look like compared to their conversation?
-```{r frequency_by_rank}
-# plot 
+```{r word frequency}
+###########ConvoId#### 
 wordcount %>% 
   ggplot(aes(Count/ctotal)) +
-  geom_histogram()
+  geom_histogram(bins = 15) +
+  labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words')
 
-################
+###########Corpus#####
 words11 %>% 
   ggplot(aes(Count)) +
-  geom_histogram(bins=20) +
+  geom_histogram(bins = 20) +
   scale_x_log10() +
-  labs(x = '# of occurences per word',y = '# of words')
-################
+  labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words')
 
-wordcount2 %>% 
-  ggplot(aes(Count/ctotal)) +
-  geom_histogram()
+###########Numset##### 
+# wordcount2 %>% 
+#   ggplot(aes(Count/ctotal)) +
+#   geom_histogram(bins = 15) +
+#   labs(title = 'Word Frequency per Number of Turns', x = '# of occurences per words', y = 'proportions')
+# 
+# wordcount2 %>% 
+#   ggplot(aes(Count/ctotal, fill = as.factor(NumTurn))) +
+#   geom_histogram(show.legend = FALSE) +
+#   xlim(NA, 0.0009) +
+#   facet_wrap(~NumTurn, ncol = 2, scales = "free_y")
+# wordcount2 %>% # to look at the number of values in each factor
+#   ggplot(aes(NumTurn)) + 
+#   geom_histogram()
+# summary(as.factor(fullset$NumTurn))
 
-wordcount2 %>% 
-  ggplot(aes(Count/ctotal, fill = as.factor(NumTurn))) +
-  geom_histogram(show.legend = FALSE) +
-  xlim(NA, 0.0009) +
-  facet_wrap(~NumTurn, ncol = 2, scales = "free_y")
-wordcount2 %>% # to look at the number of values in each factor
-  ggplot(aes(NumTurn)) + 
-  geom_histogram()
-summary(as.factor(fullset$NumTurn))
+```
 
-freq_by_rank <- wordcount %>% 
-  group_by(ConvoId) %>% 
-  mutate(rank = row_number(), 
-         `term frequency` = Count/ctotal)
-summary(freq_by_rank)
+
+## Rank and Frequency
+
+```{r zipfslaw}
+# freq_by_rank <- wordcount %>% 
+#   group_by(ConvoId) %>% 
+#   mutate(rank = row_number(), 
+#          `term frequency` = Count/ctotal)
+# summary(freq_by_rank)
 
 freq_by_rank1 <- words11 %>% 
   mutate(rank = row_number(),
          `term frequency` = Count)
 summary(freq_by_rank1)
 
-freq_by_rank2 <- wordcount2 %>% 
-  group_by(NumTurn) %>% 
-  mutate(rank = row_number(), 
-         `term frequency` = Count/ctotal)
-summary(log10(freq_by_rank2[6]))
+# freq_by_rank2 <- wordcount2 %>% 
+#   group_by(NumTurn) %>% 
+#   mutate(rank = row_number(), 
+#          `term frequency` = Count/ctotal)
+# summary(log10(freq_by_rank2[6]))
 
-# # Zipf's law plot - group by ConvoId
-# freq_by_rank %>% 
-#   ggplot(aes(rank, `term frequency`, color = ConvoId)) + 
-#   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
-#   scale_x_log10() +
-#   scale_y_log10()
-# # extremely noisy! not improved by removing 'color = '
+# Zipf's law plot - group by ConvoId
+freq_by_rank %>%
+  ggplot(aes(rank, `term frequency`, color = ConvoId)) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+# extremely noisy! not improved by removing 'color = '
 
 # Zipf's law plot - corpus
 freq_by_rank1 %>% 
@@ -144,33 +151,26 @@ freq_by_rank1 %>%
 #   scale_y_log10()
 # # only seven groups rather than 1,000
 
+
+# # 
+# rank_subset = freq_by_rank %>% 
+#   filter(rank < 100, # what would be the middle range of this data?
+#          rank > 5)
+# 
+# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
+
+rank_subset = freq_by_rank1 %>% 
+  filter(rank > 100) # what would be the middle range of this data?
+
+rank_model1 = lm(log10(`term frequency`) ~ log10(rank), data = freq_by_rank1)
+
+rank_model11 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
+
+# rank_subset2 = freq_by_rank2 %>% 
+#   filter(rank < 1000,
+#          rank > 10)
+# 
+# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
 ```
 
-```{r}
-
-```
-
-
-
-```{r zipfslaw}
-rank_subset = freq_by_rank %>% 
-  filter(rank < 100, # what would be the middle range of this data?
-         rank > 5)
-
-lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
-
-rank_subset2 <- freq_by_rank2 %>% 
-  filter(rank < 1000,
-         rank > 10)
-
-lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
-```
-
-```{r tf_idf}
-wordcount = wordcount %>% 
-  bind_tf_idf(Word,ConvoId,n)
-
-wordcount2= wordcount2 %>% 
-  bind_tf_idf(Word,NumTurn,n)
-```
 

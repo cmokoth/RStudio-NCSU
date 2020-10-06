@@ -3,7 +3,7 @@ title: "Import the Data"
 output: html_document
 ---
 
-```{r read, echo=FALSE, message=FALSE}
+```{r read, echo=FALSE, message=FALSE, include=FALSE}
 # library
 library(tidyverse)
 library(readxl)

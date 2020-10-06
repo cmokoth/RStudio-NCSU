@@ -14,7 +14,11 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
 Week four!
-```{r}
-fullset
+```{r tf_idf}
+wordcount = wordcount %>% 
+  bind_tf_idf(Word,ConvoId,n)
+
+wordcount2= wordcount2 %>% 
+  bind_tf_idf(Word,NumTurn,n)
 ```
 
