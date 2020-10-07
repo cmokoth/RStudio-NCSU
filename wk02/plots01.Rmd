@@ -34,25 +34,29 @@ Our data are held as full exchanges in a dialogue, where each exchange can compr
 ```{r fulltidy plots2}
 # zipf's law = nl follows log scale, log-log plot w/ rank?
 fulltidy %>% count(Word, sort = TRUE) %>% 
-  filter(n > 500) %>% 
+  # filter(n > 500) %>% 
+  slice_max(n,n = 25) %>% 
   ggplot(aes(Word,n)) +
   geom_col() +
-  coord_flip()
+  coord_flip() +
+  labs(title = 'Top Used Words in Dialogue', x = NULL)
 
-fulltidy %>% count(Word, sort = TRUE) %>% 
-  filter(n > 500) %>% 
-  ggplot(aes(Word,n, color = Role)) +
+fulltidy %>% count(Word,Role, sort = TRUE) %>% 
+  # filter(n > 500) %>% 
+  slice_max(n,n = 25) %>% 
+  ggplot(aes(Word,n, fill = as.factor(Role))) +
   geom_col() +
-  coord_flip()
+  coord_flip() +
+  labs(title = "Top Words by Role", x = NULL)
 
 ####Bar Charts (n) By Role####
 
 fulltidy %>% 
   filter(Role == 1) %>% 
   count(Word, sort = TRUE) %>% 
-  filter(n > 200) %>% 
+  slice_max(n,n = 20) %>% 
   ggplot(aes(Word,n)) +
-  geom_col(aes(color = n)) +
+  geom_col(aes(fill = n)) +
 #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
   labs(x = NULL, title = "Words: Persuadee") +
   coord_flip()
@@ -60,57 +64,69 @@ fulltidy %>%
 fulltidy %>% 
   filter(Role == 0) %>% 
   count(Word, sort = TRUE) %>% 
-  filter(n > 500) %>% 
+  slice_max(n,n = 20) %>% 
   ggplot(aes(Word,n)) +
-  geom_col(aes(color = n)) +
+  geom_col(aes(fill = n)) +
 #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
   labs(x = NULL, title = "Words: Persuader") +
   coord_flip()
 
 #####Bar Charts (n/sum(n) by Role####
 # proportional, persuadee bar
-fulltidy %>% 
-  filter(Role == 1) %>% 
-  count(Word, sort = TRUE) %>% 
-  mutate(proportion = n / sum(n)) %>% 
-  ggplot(aes(Word,proportion)) +
-  geom_jitter(aes(color = n)) +
-  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
-  labs(x = NULL, title = "Words: Persuadee") +
-  coord_flip()
-
-# proportional, persuader bar
-fulltidy %>% 
-  filter(Role == 0) %>% 
-  count(Word, sort = TRUE) %>% 
-  mutate(proportion = n / sum(n)) %>% 
-  ggplot(aes(Word,proportion)) +
-  geom_jitter(aes(color = n)) +
-  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
-  labs(x = NULL, title = "Words: Persuader") +
-  coord_flip()
+# fulltidy %>% 
+#   filter(Role == 1) %>% 
+#   count(Word, sort = TRUE) %>% 
+#   mutate(proportion = n / sum(n)) %>% 
+#   ggplot(aes(Word,proportion)) +
+#   geom_histogram(aes(color = n)) +
+#   geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+#   labs(x = NULL, title = "Words: Persuadee") +
+#   coord_flip()
+# 
+# # proportional, persuader bar
+# fulltidy %>% 
+#   filter(Role == 0) %>% 
+#   count(Word, sort = TRUE) %>% 
+#   mutate(proportion = n / sum(n)) %>% 
+#   ggplot(aes(Word,proportion)) +
+#   geom_jitter(aes(color = n)) +
+#   geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+#   labs(x = NULL, title = "Words: Persuader") +
+#   coord_flip()
 
 ```
 
 ## Including Plots
-
-
 ```{r annset plots, echo=FALSE}
 # plot multiple things against actual donation
 # plot of actual donation v stated donation
+# best way to represent the donation amount and the intended donation amount
 annset %>% 
 #  filter(IntDonation < 5000) %>% 
   ggplot() +
   geom_boxplot(aes(IntDonation))
-annset %>% 
+annset %>%
+  filter(IntDonation < 75) %>% 
   ggplot() +
-  geom_boxplot(aes(Donation))
+  geom_boxplot(aes(Donation-IntDonation))
+
+annset %>% 
+  ggplot(aes(IntDonation,Donation)) +
+  geom_jitter()
 
 annset %>% 
   #difference between IntDonation and Donation
   filter(IntDonation < 75) %>% 
   ggplot(aes(Donation-IntDonation)) +
-  geom_histogram(binwidth = 10)
+  geom_histogram(binwidth = 10) 
+
+
+annset %>% 
+  #difference between IntDonation and Donation
+  filter(IntDonation < 75) %>% 
+  ggplot(aes(Donation-IntDonation)) +
+  geom_histogram(bins = 15) 
+
 ```
 Most people actually donated how much they pledged to donate. As expected, some donated less. There are two outliers with respect to x, one where someone promise to donate \$10,000 but didn't, and another where someone promised to donate \$500 and didn't. A kind soul donated more than they initially pledged. 
 
@@ -163,17 +179,15 @@ full_i_raw %>%
 #   facet_wrap(~trait) +
 #   geom_histogram(bins = 6, show.legend = FALSE)
 
-
-
-# 3 barcharts for education/ideology
-full_i_raw %>% 
-  count(edu,ideology) %>% 
-  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-  # reoder education levels
-  filter(!is.na(edu), !is.na(ideology)) %>% 
-  ggplot(aes(ideology,n,fill = ideology)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~edu,scales = "free")
+# # 3 barcharts for education/ideology
+# full_i_raw %>% 
+#   count(edu,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reoder education levels
+#   filter(!is.na(edu), !is.na(ideology)) %>% 
+#   ggplot(aes(ideology,n,fill = ideology)) +
+#   geom_col(show.legend = FALSE) +
+#   facet_wrap(~edu,scales = "free")
 
 # one (or more) similar plots with other info
 # more exploratory plots
@@ -182,15 +196,16 @@ full_i_raw %>%
   filter(!is.na(age),!is.na(income)) %>% 
   ggplot(aes(age,income)) +
   geom_jitter() +
-  facet_wrap(~race) 
-  
+  facet_wrap(~race) +
+  coord_flip()
 
 # wrap race age X income
 full_i_raw %>% 
   filter(!is.na(age),!is.na(income)) %>% 
   ggplot(aes(age,income)) +
   geom_jitter() +
-  facet_wrap(~edu)
+  facet_wrap(~edu) +
+  coord_flip()
 
 # wrap race age X income
 full_i_raw %>% 
@@ -199,36 +214,39 @@ full_i_raw %>%
   geom_jitter() +
   facet_wrap(~marital)
 
-# stacked barchart education/ideology
+# # stacked barchart education/ideology
+# full_i_raw %>% 
+#   count(edu,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reorder education levels
+#   filter(!is.na(edu), !is.na(ideology)) %>% 
+#   ggplot(aes(ideology,n,fill = edu)) +
+#   geom_col()
+
+# dodge barchart ideology/education
 full_i_raw %>% 
   count(edu,ideology) %>% 
   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-  # reorder education levels
-  filter(!is.na(edu), !is.na(ideology)) %>% 
-  ggplot(aes(edu,n,fill = ideology)) +
-  geom_col()
-
-# dodge barchart education/ideology
-full_i_raw %>% 
-  count(edu,ideology) %>% 
-  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>% 
   # reoder education levels
   filter(!is.na(edu), !is.na(ideology)) %>% 
-  ggplot(aes(edu,n,fill = ideology)) +
+  ggplot(aes(ideology,n,fill = edu)) +
   geom_col(position = "dodge")
 
-# dodge barchart religion/ideology
+# # dodge barchart religion/ideology
+# full_i_raw %>% 
+#   count(religion,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reoder education levels
+#   filter(!is.na(religion), !is.na(ideology)) %>% 
+#   ggplot(aes(religion,n,fill = ideology)) +
+#   geom_col(position = "dodge")
+
+# dodge barchart ideology/religion
 full_i_raw %>% 
   count(religion,ideology) %>% 
   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-  # reoder education levels
-  filter(!is.na(religion), !is.na(ideology)) %>% 
-  ggplot(aes(religion,n,fill = ideology)) +
-  geom_col(position = "dodge")
-
-full_i_raw %>% 
-  count(religion,ideology) %>% 
-  mutate(religion = as.factor(religion)) %>% 
+  mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>% 
   # reoder education levels
   filter(!is.na(religion), !is.na(ideology)) %>% 
   ggplot(aes(ideology,n,fill = religion)) +

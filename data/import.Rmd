@@ -2,8 +2,7 @@
 title: "Import the Data"
 output: html_document
 ---
-
-```{r read, echo=FALSE, message=FALSE, include=FALSE}
+```{r in, include=FALSE, message=FALSE}
 # library
 library(tidyverse)
 library(readxl)
@@ -13,6 +12,12 @@ library(stopwords)
 library(dplyr)
 library(skimr)
 
+# set theme
+theme_set(theme_classic())
+```
+
+
+```{r read, echo=FALSE, message=FALSE, include=FALSE}
 # full_d for the full dialog, not annotated
 full_d_raw = read_csv('data/FullData/full_dialog.csv',
          col_names = TRUE)

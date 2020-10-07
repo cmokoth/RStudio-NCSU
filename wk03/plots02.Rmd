@@ -10,12 +10,9 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 # source('wk01/source.R')
 ```
 
-
 ```{r import, child='../data/import.Rmd'}
 
 ```
-
-
 
 ## Zipf's Law
 Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
@@ -72,7 +69,6 @@ wordcount1 = fullset %>%
 ```
 
 
-
 What do the distributions of the words look like compared to their conversation?
 ```{r word frequency}
 ###########ConvoId#### 
@@ -108,25 +104,27 @@ wordcount1 %>%
 
 
 ## Rank and Frequency
+```{r frequency/rank}
+# by convo_id
+freq_by_rank <- wordcount %>%
+  group_by(ConvoId) %>%
+  mutate(rank = row_number(),
+         `term frequency` = Count/ctotal)
 
-```{r zipfslaw}
-# freq_by_rank <- wordcount %>% 
-#   group_by(ConvoId) %>% 
-#   mutate(rank = row_number(), 
-#          `term frequency` = Count/ctotal)
-# summary(freq_by_rank)
-
+# corpus, no by variable
 freq_by_rank1 <- wordcount1 %>% 
   mutate(rank = row_number(),
          `term frequency` = Count)
-summary(freq_by_rank1)
 
 # freq_by_rank2 <- wordcount2 %>% 
 #   group_by(NumTurn) %>% 
 #   mutate(rank = row_number(), 
 #          `term frequency` = Count/ctotal)
 # summary(log10(freq_by_rank2[6]))
+```
 
+
+```{r zipfslaw}
 # Zipf's law plot - group by ConvoId
 freq_by_rank %>%
   ggplot(aes(rank, `term frequency`, color = ConvoId)) +

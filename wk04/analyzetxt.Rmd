@@ -15,9 +15,30 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 Week four!
 ```{r tf_idf}
-tf_idf1 = freq_by_rank1 %>% 
-  bind_tf_idf(Word,rank,Count)
+# there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
+# rank groupd by ConvoId
+ranktf = freq_by_rank %>% 
+  # mutate(total = 352376) %>% 
+  bind_tf_idf(Word,ConvoId,Count)
 
-tf_idf1
+# rank grouped by corpus (not extremely efficient)
+ranktf1 = freq_by_rank %>% 
+  mutate(total = 352376) %>% 
+  bind_tf_idf(Word,total,Count)
+
+# checking her out
+ranktf %>%
+  select(-rank) %>%
+  arrange(desc(tf_idf))
+# checking HER out
+ranktf1 %>%
+  select(-rank) %>%
+  arrange(desc(tf_idf))
+
+# not working the way I want?
+ranktf %>% 
+  slice_max(tf_idf,n = 10) %>% 
+  ggplot(aes(tf_idf,Word)) +
+  geom_col()
 ```
 
