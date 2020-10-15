@@ -11,6 +11,7 @@ library(broom)
 library(stopwords)
 library(dplyr)
 library(skimr)
+library(tidylo)
 
 # set theme
 theme_set(theme_classic())
@@ -83,7 +84,7 @@ annset = ann_d_raw %>%
 
 
 ```{r tidyer, echo=FALSE, message=FALSE}
-# What can we do with tidyr? Here are some transformations from chapter 1 of Silges Text Mining With R to make token per row data. 
+# What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
 
 fulltidy = fullset %>% 
   select(ConvoId,
@@ -93,8 +94,18 @@ fulltidy = fullset %>%
          Dialogue) 
 # putting the words in un_nest
 fulltidy = full_d_raw %>% 
+  inner_join(fullset) %>% 
+    mutate(
+    # religion = factor(religion,levels = c(),labels = c()), 
+    # sex = factor(religion,levels = c(),labels = c()), 
+    # ideology = factor(religion,levels = c(),labels = c()), 
+    Role = factor(Role,levels = c("0","1"),labels = c("Persuader","Persuadee")) 
+    # edu = factor(religion,levels = c(),labels = c())
+  ) %>% 
   unnest_tokens(Word,Dialogue) %>% 
   # pulling out irrelevant words
-  anti_join(get_stopwords(),by = c("Word" = "word"))
+  anti_join(get_stopwords(),by = c("Word" = "word")) 
 
+# extremely low counts for some words renderes tf_idf nearly useless
 ```
+

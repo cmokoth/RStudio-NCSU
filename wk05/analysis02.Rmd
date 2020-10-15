@@ -1,0 +1,113 @@
+---
+title: "Tidylo"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+```
+
+```{r import, child=c('../data/import.Rmd','../wk03/plots02.Rmd')}
+
+```
+
+## Log-Odds
+```{r log_odds}
+# log-odds by interest trait: religion, sex, ideology, role, education
+# log-odds grouped by religion
+religion_lo = fulltidy %>%
+  filter(!is.na(religion)) %>%
+  count(Word, religion, sort = TRUE) %>%
+  bind_log_odds(religion, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(religion) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by religion
+
+# log-odds grouped by sex
+sex_lo = fulltidy %>%
+  filter(!is.na(sex)) %>%
+  count(Word, sex, sort = TRUE) %>%
+  bind_log_odds(sex, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(sex) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by sex
+
+# log-odds grouped by ideology
+ideology_lo = fulltidy %>%
+  filter(!is.na(ideology)) %>%
+  count(Word, ideology, sort = TRUE) %>%
+  bind_log_odds(ideology, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(ideology) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by ideology
+
+# log-odds grouped by role
+role_lo = fulltidy %>%
+  filter(!is.na(Role)) %>%
+  count(Word, Role, sort = TRUE) %>%
+  bind_log_odds(Role, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(Role) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by role
+
+# log-odds grouped by role
+edu_lo = fulltidy %>%
+  filter(!is.na(edu)) %>%
+  count(Word, edu, sort = TRUE) %>%
+  bind_log_odds(edu, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(edu) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by education
+
+
+##### plots #####
+
+religion_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
+  geom_col() +
+  facet_wrap(~religion, scales = "free_y") +
+  labs(y = NULL)
+
+sex_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
+  geom_col() +
+  facet_wrap(~sex, scales = "free_y") +
+  labs(y = NULL)
+
+ideology_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
+  geom_col() +
+  facet_wrap(~ideology, scales = "free_y") +
+  labs(y = NULL)
+
+role_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
+  geom_col() +
+  facet_wrap(~Role, scales = "free_y") +
+  labs(y = NULL)
+
+edu_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
+  geom_col() +
+  facet_wrap(~edu, scales = "free_y") +
+  labs(y = NULL)
+
+```
+

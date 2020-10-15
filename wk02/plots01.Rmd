@@ -138,7 +138,7 @@ fullset %>%
   count(ConvoId) %>% 
   ggplot(aes(n)) +
   geom_histogram()
-
+##### values plots #####
 # the big five [extrovert, agreeable, conscientious, neurotic, open]
 full_i_raw %>% 
   select(B3,extrovert:open) %>% 
@@ -147,7 +147,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 5, show.legend = FALSE)
 
-# the moral foundations [extrovert, agreeable, conscientious, neurotic, open]
+# the moral foundations [care, fairness, loyalty, authority, purity, freedom]
 full_i_raw %>% 
   select(B3,care:freedom) %>% 
   pivot_longer(care:freedom,names_to = "trait", values_to = "score") %>% 
@@ -155,7 +155,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
 
-# the Schwartz Portrait [extrovert, agreeable, conscientious, neurotic, open]
+# the Schwartz Portrait [conform, tradition, benevolence, universalism, self_direction, stimulation, hedonism, achievement, power, security]
 full_i_raw %>% 
   select(B3,conform:security) %>% 
   pivot_longer(conform:security,names_to = "trait", values_to = "score") %>% 
@@ -163,7 +163,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
 
-# the decision making style [extrovert, agreeable, conscientious, neurotic, open]
+# the decision making style [rational, intuitive]
 full_i_raw %>% 
   select(B3,rational:intuitive) %>% 
   pivot_longer(rational:intuitive,names_to = "trait", values_to = "score") %>% 
@@ -171,6 +171,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 5, show.legend = FALSE)
 
+#####comments####
 # # 10 baby plots of value plots
 # full_i_raw %>% 
 #   select(B3,fairness:self_direction) %>% 
@@ -189,30 +190,31 @@ full_i_raw %>%
 #   geom_col(show.legend = FALSE) +
 #   facet_wrap(~edu,scales = "free")
 
-# one (or more) similar plots with other info
-# more exploratory plots
-# wrap race age X income 
-full_i_raw %>% 
-  filter(!is.na(age),!is.na(income)) %>% 
-  ggplot(aes(age,income)) +
-  geom_jitter() +
-  facet_wrap(~race) +
+##### traits plots ####
+# one (or more) trait plots with other info
+# more exploratory plots age <dbl>, sex <chr>, race <chr>, edu <chr>, marital <chr>, employment <chr>, income <dbl>, religion <chr>, ideology <chr>
+
+# age/sex
+full_i_raw %>%
+  filter(!is.na(sex)) %>% 
+  ggplot(aes(age)) +
+  geom_histogram(bins = 10) +
+  facet_wrap(~sex)
+# income/employment
+full_i_raw %>%
+  filter(!is.na(employment),!is.na(income)) %>% 
+  ggplot(aes(income,fill = marital)) +
+  geom_histogram(binwidth = 1.5) +
+  facet_wrap(~employment) +
   coord_flip()
 
-# wrap race age X income
-full_i_raw %>% 
-  filter(!is.na(age),!is.na(income)) %>% 
-  ggplot(aes(age,income)) +
-  geom_jitter() +
-  facet_wrap(~edu) +
-  coord_flip()
-
-# wrap race age X income
-full_i_raw %>% 
-  filter(!is.na(age),!is.na(income)) %>% 
-  ggplot(aes(age,income)) +
-  geom_jitter() +
-  facet_wrap(~marital)
+# religion/ideology
+full_i_raw %>%
+  count(religion,ideology) %>% 
+  filter(!is.na(ideology),!is.na(religion)) %>% 
+  ggplot(aes(ideology,n)) +
+  geom_col() +
+  facet_wrap(~religion)
 
 # # stacked barchart education/ideology
 # full_i_raw %>% 
@@ -226,7 +228,7 @@ full_i_raw %>%
 # dodge barchart ideology/education
 full_i_raw %>% 
   count(edu,ideology) %>% 
-  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
   mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>% 
   # reoder education levels
   filter(!is.na(edu), !is.na(ideology)) %>% 
@@ -254,7 +256,7 @@ full_i_raw %>%
 
 ```
 
-## More Plots!
+
 ```{r other plots}
 # plots for frequency of (top) words and donation amount
 # have to use the id_tdf words to organize by top words that ISN'T a stop word

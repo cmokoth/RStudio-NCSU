@@ -1,0 +1,102 @@
+---
+title: "Term Frequency"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+```
+
+```{r import, child=c('../data/import.Rmd','../wk03/plots02.Rmd')}
+
+```
+
+## Term Frequency - Inverse Document Frequency
+Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
+We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
+```{r tf_idf}
+# there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
+# rank groupd by ConvoId
+ranktf = freq_by_rank %>% 
+  # mutate(total = 352376) %>% 
+  bind_tf_idf(Word,ConvoId,Count)
+# by utterance
+
+# rank grouped by corpus (not extremely efficient)
+# ranktf1 = freq_by_rank %>% 
+#   mutate(total = 352376) %>% 
+#   bind_tf_idf(Word,total,Count)
+
+# checking her out
+ranktf %>%
+  select(-rank) %>%
+  arrange(desc(tf_idf))
+# checking HER out
+# ranktf1 %>%
+#   select(-rank) %>%
+#   arrange(desc(tf_idf))
+
+# not working the way I want?
+# ranktf %>% 
+#   slice_max(tf_idf,n = 10) %>% 
+#   ggplot(aes(tf_idf,Word)) +
+#   geom_col()
+
+# grouped by role - top 10 words by role
+fulltidy %>% 
+  count(Role,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word, Role,n) %>% 
+  arrange(-tf_idf) %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+fulltidy %>% 
+  # mutate(Utterance = row_number()) %>% 
+  unite('ConvoId', ConvoId,Role,sep = '--',remove = FALSE) %>% 
+  count(ConvoId,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word, ConvoId,n) %>% 
+  arrange(-tf_idf) %>% 
+  separate(ConvoId,into = c('ConvoId','Role'),sep = '--') %>% 
+  filter(n > 10) %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+
+convo_tf_idf = fulltidy %>% 
+  # mutate(Utterance = row_number()) %>% 
+  unite('ConvoID', ConvoId,Role,sep = '--',remove = FALSE) %>% 
+  count(ConvoID,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word,ConvoID,n) %>% 
+  arrange(-tf_idf) %>% 
+  # filter(n > 10) %>% 
+  separate(ConvoID,into = c('ConvoId','Role'),sep = '--') %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+role_words = convo_tf_idf %>% 
+  group_by(Word) %>% 
+  filter(sum(n) > 50) %>% # only keep words used over 50 times total
+  ungroup() %>% 
+  group_by(Role,Word) %>% # most distinct words by role
+  # distinct(Word, Role, .keep_all = TRUE)
+  # slice_max(tf_idf,n = 15)
+  summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
+  group_by(Role) %>% 
+  slice_max(n = 15)
+
+role_words %>% 
+  ggplot(aes(tf_idf,fct_reorder(Word))) +
+  geom_col() +
+  facet_wrap(~Role, scales = "free_y")
+
+religion
+```
+tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as our document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance
+Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which **words** stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
+```{r plots}
+ranktf1 %>% 
+  
+```
+
