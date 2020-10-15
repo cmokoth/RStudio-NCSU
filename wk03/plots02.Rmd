@@ -14,7 +14,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ```
 
-## Zipf's Law
+## Word Laws
 Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
 ```{r wordcount}
 ############## Group = ConvoId #########

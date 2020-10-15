@@ -96,16 +96,15 @@ fulltidy = fullset %>%
 fulltidy = full_d_raw %>% 
   inner_join(fullset) %>% 
     mutate(
-    # religion = factor(religion,levels = c(),labels = c()), 
-    # sex = factor(religion,levels = c(),labels = c()), 
-    # ideology = factor(religion,levels = c(),labels = c()), 
-    Role = factor(Role,levels = c("0","1"),labels = c("Persuader","Persuadee")) 
-    # edu = factor(religion,levels = c(),labels = c())
+    religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), labels = c("Catholic","Protestant","Atheist","Other religion")), 
+    sex = factor(sex, levels = c("Male","Female","Other"),labels = c("Male","Female","Other")), 
+    ideology = factor(ideology, levels =  c("Conservative","Moderate","Liberal"), labels = c("Conservative","Moderate","Liberal"), ordered = FALSE), 
+    Role = factor(Role, levels = c("0","1"),labels = c("Persuader","Persuadee")), # adding labels!!
+    edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), labels = c("Less than four-year college","College","Postgraduate"))
   ) %>% 
   unnest_tokens(Word,Dialogue) %>% 
   # pulling out irrelevant words
   anti_join(get_stopwords(),by = c("Word" = "word")) 
 
-# extremely low counts for some words renderes tf_idf nearly useless
 ```
 

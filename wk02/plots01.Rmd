@@ -52,24 +52,24 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
 ####Bar Charts (n) By Role####
 
 fulltidy %>% 
-  filter(Role == 1) %>% 
-  count(Word, sort = TRUE) %>% 
+  count(Word,Role,sort = TRUE) %>% 
   slice_max(n,n = 20) %>% 
   ggplot(aes(Word,n)) +
   geom_col(aes(fill = n)) +
 #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
-  labs(x = NULL, title = "Words: Persuadee") +
+  facet_wrap(~Role, scales = "free") +
+  labs(x = NULL, title = "Words by Role") +
   coord_flip()
 
-fulltidy %>% 
-  filter(Role == 0) %>% 
-  count(Word, sort = TRUE) %>% 
-  slice_max(n,n = 20) %>% 
-  ggplot(aes(Word,n)) +
-  geom_col(aes(fill = n)) +
-#  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
-  labs(x = NULL, title = "Words: Persuader") +
-  coord_flip()
+# fulltidy %>% 
+#   filter(Role == 0) %>% 
+#   count(Word, sort = TRUE) %>% 
+#   slice_max(n,n = 20) %>% 
+#   ggplot(aes(Word,n)) +
+#   geom_col(aes(fill = n)) +
+# #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+#   labs(x = NULL, title = "Words: Persuader") +
+#   coord_flip()
 
 #####Bar Charts (n/sum(n) by Role####
 # proportional, persuadee bar
@@ -229,7 +229,7 @@ full_i_raw %>%
 full_i_raw %>% 
   count(edu,ideology) %>% 
   mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
-  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>% 
+  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
   # reoder education levels
   filter(!is.na(edu), !is.na(ideology)) %>% 
   ggplot(aes(ideology,n,fill = edu)) +
@@ -247,8 +247,8 @@ full_i_raw %>%
 # dodge barchart ideology/religion
 full_i_raw %>% 
   count(religion,ideology) %>% 
-  mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-  mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>% 
+  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
+  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
   # reoder education levels
   filter(!is.na(religion), !is.na(ideology)) %>% 
   ggplot(aes(ideology,n,fill = religion)) +
