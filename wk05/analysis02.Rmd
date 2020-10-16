@@ -1,5 +1,5 @@
 ---
-title: "Tidylo"
+title: "Log Odds"
 output: html_document
 ---
 
@@ -87,7 +87,7 @@ religion_lo %>%
 sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +
-  facet_wrap(~sex, scales = "free_y") +
+  facet_wrap(~sex, scales = "free") +
   labs(y = NULL)
 
 ideology_lo %>%
@@ -109,4 +109,3 @@ edu_lo %>%
   labs(y = NULL)
 
 ```
-
