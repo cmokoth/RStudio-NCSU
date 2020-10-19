@@ -74,34 +74,47 @@ edu_lo = fulltidy %>%
   ungroup %>%
   group_by(edu) %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by education
+```
 
 
+```{r log_odds}
 ##### plots #####
-
 religion_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +
   facet_wrap(~religion, scales = "free_y") +
   labs(y = NULL)
+```
 
+
+```{r log_odds}
 sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +
   facet_wrap(~sex, scales = "free") +
   labs(y = NULL)
+```
 
+
+```{r log_odds}
 ideology_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +
   facet_wrap(~ideology, scales = "free_y") +
   labs(y = NULL)
+```
 
+
+```{r log_odds}
 role_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +
   facet_wrap(~Role, scales = "free_y") +
   labs(y = NULL)
+```
 
+
+```{r log_odds}
 edu_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
   geom_col() +

@@ -18,7 +18,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 What's in our data? Let's take a look through some plots.
 
-```{r fulltidy plots}
+```{r fulltidy plots 01}
 # looking at individual sentences/instances to look at how standard the data are
 fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 # most popular words
@@ -29,18 +29,22 @@ fulltidy %>% count(Word, sort = TRUE) %>%
   coord_flip() +
   labs(x = NULL)
 ```
-Our data are held as full exchanges in a dialogue, where each exchange can comprise of multiple sentences. This plot shows us which words were used the most during the dialogues across the whole set, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
+Our data are held as full exchanges in a dialogue, where each exchange can comprise of multiple sentences. The dialogue consists of typed exchanges between participants.
+Using 'tidy' data, we can see which words were used the most during the dialogues across the whole set, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
 
-```{r fulltidy plots2}
+```{r fulltidy plots 02}
 # zipf's law = nl follows log scale, log-log plot w/ rank?
 fulltidy %>% count(Word, sort = TRUE) %>% 
   # filter(n > 500) %>% 
   slice_max(n,n = 25) %>% 
-  ggplot(aes(Word,n)) +
+  ggplot(aes(fct_reorder(Word,n),n,)) +
   geom_col() +
   coord_flip() +
   labs(title = 'Top Used Words in Dialogue', x = NULL)
+```
 
+
+```{r fulltidy plots 03}
 fulltidy %>% count(Word,Role, sort = TRUE) %>% 
   # filter(n > 500) %>% 
   slice_max(n,n = 25) %>% 
@@ -48,19 +52,25 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
   geom_col() +
   coord_flip() +
   labs(title = "Top Words by Role", x = NULL)
+```
 
+
+```{r fulltidy plots 04}
 ####Bar Charts (n) By Role####
 
 fulltidy %>% 
   count(Word,Role,sort = TRUE) %>% 
   slice_max(n,n = 20) %>% 
   ggplot(aes(Word,n)) +
-  geom_col(aes(fill = n)) +
+  geom_col(aes(fill = n),show.legend = FALSE) +
 #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
   facet_wrap(~Role, scales = "free") +
-  labs(x = NULL, title = "Words by Role") +
+  labs(x = NULL, y = 'count',title = "Words by Role") +
   coord_flip()
+```
+The words each role said most were
 
+```{r fulltidy plots comment, comment=FALSE}
 # fulltidy %>% 
 #   filter(Role == 0) %>% 
 #   count(Word, sort = TRUE) %>% 
@@ -95,6 +105,8 @@ fulltidy %>%
 #   coord_flip()
 
 ```
+The top words tell us some basic information about our data. We see the name of the charity 'Save [the] Children' and we see the task objective 'donate'. We also see words related to money, 'donation','payment','amount'. There are also affirming words, 'yes','great','good' and other adjectives that would help convince people.
+Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis.
 
 ## Including Plots
 ```{r annset plots, echo=FALSE}
@@ -145,8 +157,12 @@ full_i_raw %>%
   pivot_longer(extrovert:open,names_to = "trait", values_to = "score") %>% 
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
-  geom_histogram(bins = 5, show.legend = FALSE)
+  geom_histogram(bins = 5, show.legend = FALSE) +
+  labs(title = 'the big five')
+```
+Here we have our distributions of personality traits. This study collected data for three major personality scores: the big five, the schwartz and the moral foundations. The big five show us that our sample has very agreeable, extroverted, and concientious participants. They also skew towards open. 
 
+```{r fullset plots, echo=FALSE}
 # the moral foundations [care, fairness, loyalty, authority, purity, freedom]
 full_i_raw %>% 
   select(B3,care:freedom) %>% 
@@ -154,7 +170,10 @@ full_i_raw %>%
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
+```
+Here we see high levels of fariness and care, indicating a compassionate bunch.
 
+```{r fullset plots, echo=FALSE}
 # the Schwartz Portrait [conform, tradition, benevolence, universalism, self_direction, stimulation, hedonism, achievement, power, security]
 full_i_raw %>% 
   select(B3,conform:security) %>% 
@@ -162,7 +181,10 @@ full_i_raw %>%
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
+```
+The Schartz protrait shows benevolence, self-direction, and universalism
 
+```{r fullset plots, echo=FALSE}
 # the decision making style [rational, intuitive]
 full_i_raw %>% 
   select(B3,rational:intuitive) %>% 
@@ -171,7 +193,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 5, show.legend = FALSE)
 
-#####comments####
+ #####comments####
 # # 10 baby plots of value plots
 # full_i_raw %>% 
 #   select(B3,fairness:self_direction) %>% 
@@ -189,7 +211,10 @@ full_i_raw %>%
 #   ggplot(aes(ideology,n,fill = ideology)) +
 #   geom_col(show.legend = FALSE) +
 #   facet_wrap(~edu,scales = "free")
+```
 
+
+```{r fullset plots, echo=FALSE}
 ##### traits plots ####
 # one (or more) trait plots with other info
 # more exploratory plots age <dbl>, sex <chr>, race <chr>, edu <chr>, marital <chr>, employment <chr>, income <dbl>, religion <chr>, ideology <chr>
@@ -200,6 +225,10 @@ full_i_raw %>%
   ggplot(aes(age)) +
   geom_histogram(bins = 10) +
   facet_wrap(~sex)
+```
+
+
+```{r fullset plots, echo=FALSE}
 # income/employment
 full_i_raw %>%
   filter(!is.na(employment),!is.na(income)) %>% 
@@ -207,7 +236,10 @@ full_i_raw %>%
   geom_histogram(binwidth = 1.5) +
   facet_wrap(~employment) +
   coord_flip()
+```
 
+
+```{r fullset plots, echo=FALSE}
 # religion/ideology
 full_i_raw %>%
   count(religion,ideology) %>% 
@@ -215,7 +247,10 @@ full_i_raw %>%
   ggplot(aes(ideology,n)) +
   geom_col() +
   facet_wrap(~religion)
+```
 
+
+```{r fullset plots, echo=FALSE}
 # # stacked barchart education/ideology
 # full_i_raw %>% 
 #   count(edu,ideology) %>% 

@@ -1,0 +1,50 @@
+---
+title: "What's Next?"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+# keeping track of the code that each script requires! REMEMBER: documents used as children cannot have setup chunks!!
+```
+
+```{r import, child='../data/import.Rmd'}
+
+```
+
+## R Markdown
+```{r values modelling}
+value_freq <- fulltidy %>%
+  filter(!is.na(conform)) %>%
+  count(conform, Word) %>%
+  complete(conform, Word, fill = list(n = 0)) %>%
+  group_by(conform) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+value_slopes <- value_freq %>%
+  nest(tiny_tibbles = c(conform, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ conform, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "conform") %>%
+  mutate(p.value = p.adjust(p.value))
+
+value_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(value_freq) %>%
+  ggplot(aes(conform, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Conformity score",
+       y = "Word frequency")
+```
+

@@ -2,14 +2,6 @@
 title: "Zipf's Law"
 output: html_document
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
-
-# source('wk01/source.R')
-```
-
 ```{r import, child='../data/import.Rmd'}
 
 ```
