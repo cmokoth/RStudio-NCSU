@@ -68,14 +68,20 @@ wordcount %>%
   ggplot(aes(Count/ctotal)) +
   geom_histogram(bins = 15) +
   labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words')
+```
 
+
+```{r word frequency}
 ###########Corpus#####
 wordcount1 %>% 
   ggplot(aes(Count)) +
   geom_histogram(bins = 20) +
   scale_x_log10() +
   labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words')
+```
 
+
+```{r word frequency comments}
 ###########Numset##### 
 # wordcount2 %>% 
 #   ggplot(aes(Count/ctotal)) +
@@ -124,7 +130,10 @@ freq_by_rank %>%
   scale_x_log10() +
   scale_y_log10()
 # extremely noisy! not improved by removing 'color = '
+```
 
+
+```{r zipfslaw}
 # Zipf's law plot - corpus
 freq_by_rank1 %>% 
   ggplot(aes(rank, `term frequency`)) + 
@@ -132,7 +141,10 @@ freq_by_rank1 %>%
   scale_x_log10() +
   scale_y_log10()
 # very straight
+```
 
+
+```{r zipfslaw}
 # # Zipf's law plot - group by NumTurn
 # freq_by_rank2 %>% 
 #   ggplot(aes(rank, `term frequency`, color = as.factor(NumTurn))) + 
