@@ -13,7 +13,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 ```
 
 ## Log-Odds
-```{r log_odds}
+```{r log_odds transform}
 # log-odds by interest trait: religion, sex, ideology, role, education
 # log-odds grouped by religion
 religion_lo = fulltidy %>%
@@ -75,9 +75,9 @@ edu_lo = fulltidy %>%
   group_by(edu) %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by education
 ```
+Log Odds is a Bayesian technique where you compare the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
 
-
-```{r log_odds}
+```{r log_odds relgion plot}
 ##### plots #####
 religion_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
@@ -85,7 +85,7 @@ religion_lo %>%
   facet_wrap(~religion, scales = "free_y") +
   labs(y = NULL)
 ```
-
+Using log-odds to examine religion, we can learn a lot more about how people 
 
 ```{r log_odds}
 sex_lo %>%
@@ -94,7 +94,7 @@ sex_lo %>%
   facet_wrap(~sex, scales = "free") +
   labs(y = NULL)
 ```
-
+For sex, we can see that [observations]
 
 ```{r log_odds}
 ideology_lo %>%
@@ -103,7 +103,7 @@ ideology_lo %>%
   facet_wrap(~ideology, scales = "free_y") +
   labs(y = NULL)
 ```
-
+With respect to political ideology, [observations]
 
 ```{r log_odds}
 role_lo %>%
@@ -112,7 +112,7 @@ role_lo %>%
   facet_wrap(~Role, scales = "free_y") +
   labs(y = NULL)
 ```
-
+[observations]
 
 ```{r log_odds}
 edu_lo %>%
@@ -122,3 +122,4 @@ edu_lo %>%
   labs(y = NULL)
 
 ```
+[observations]
