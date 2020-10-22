@@ -2,7 +2,7 @@
 title: "Import the Data"
 output: html_document
 ---
-```{r in, include=FALSE, message=FALSE}
+```{r library, include=FALSE, message=FALSE}
 # library
 library(tidyverse)
 library(readxl)
@@ -12,9 +12,9 @@ library(stopwords)
 library(dplyr)
 library(skimr)
 library(tidylo)
-
+library(ggthemes)
 # set theme
-theme_set(theme_classic())
+theme_set(theme_solarized())
 ```
 
 

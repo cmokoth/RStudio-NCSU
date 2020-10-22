@@ -48,3 +48,7 @@ value_slopes %>%
        y = "Word frequency")
 ```
 
+```{r values and traits}
+
+```
+

@@ -62,16 +62,16 @@ wordcount1 = fullset %>%
 
 
 What do the distributions of the words look like compared to their conversation?
-```{r word frequency}
+```{r word frequency00}
 ###########ConvoId#### 
 wordcount %>% 
   ggplot(aes(Count/ctotal)) +
   geom_histogram(bins = 15) +
-  labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words')
+  labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words') 
 ```
 
 
-```{r word frequency}
+```{r word frequency01}
 ###########Corpus#####
 wordcount1 %>% 
   ggplot(aes(Count)) +
@@ -122,7 +122,7 @@ freq_by_rank1 <- wordcount1 %>%
 ```
 
 
-```{r zipfslaw}
+```{r zipfslaw00}
 # Zipf's law plot - group by ConvoId
 freq_by_rank %>%
   ggplot(aes(rank, `term frequency`, color = ConvoId)) +
@@ -133,7 +133,7 @@ freq_by_rank %>%
 ```
 
 
-```{r zipfslaw}
+```{r zipfslaw01}
 # Zipf's law plot - corpus
 freq_by_rank1 %>% 
   ggplot(aes(rank, `term frequency`)) + 
@@ -144,7 +144,7 @@ freq_by_rank1 %>%
 ```
 
 
-```{r zipfslaw}
+```{r zipfslaw02}
 # # Zipf's law plot - group by NumTurn
 # freq_by_rank2 %>% 
 #   ggplot(aes(rank, `term frequency`, color = as.factor(NumTurn))) + 
