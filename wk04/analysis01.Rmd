@@ -77,21 +77,21 @@ convo_tf_idf = fulltidy %>%
 
 role_words = convo_tf_idf %>% 
   group_by(Word) %>% 
-  filter(sum(n) > 50) %>% # only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # only keep words used over 50 times total
   ungroup() %>% 
   group_by(Role,Word) %>% # most distinct words by role
   # distinct(Word, Role, .keep_all = TRUE)
   # slice_max(tf_idf,n = 15)
   summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
   group_by(Role) %>% 
-  slice_max(n = 15)
+  slice_max(tf_idf,n = 15)
 
 role_words %>% 
-  ggplot(aes(tf_idf,fct_reorder(Word))) +
+  ggplot(aes(tf_idf,Word)) +
   geom_col() +
   facet_wrap(~Role, scales = "free_y")
 
 ```
-tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as our document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance
+tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
 Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which **words** stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
-The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path.
+The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.

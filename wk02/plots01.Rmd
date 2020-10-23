@@ -14,9 +14,10 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ```
 
-## Exploratory Analysis
+## Text Analysis
 
-What's in our data? Let's take a look through some plots.
+Using tidy data, we can explore text data and unsupervised learning to gain a better understanding of our dataset.
+For this project, we are using MIT's Persuasion for Good dataset </link here>
 
 ```{r fulltidy plots 01}
 # looking at individual sentences/instances to look at how standard the data are
@@ -24,15 +25,16 @@ fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 # most popular words
 fulltidy %>% count(Word, sort = TRUE) %>% 
   filter(n > 1000) %>% 
+  # reorder words by count
   ggplot(aes(fct_reorder(Word, n),n)) +
   geom_col() +
   coord_flip() +
-  labs(x = NULL)
+  labs(x = NULL, title = "Most Common Words in Dialogue")
 ```
-Our data are held as full exchanges in a dialogue, where each exchange can comprise of multiple sentences. The dialogue consists of typed exchanges between participants.
-Using 'tidy' data, we can see which words were used the most during the dialogues across the whole set, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
+Our data are held as full exchanges in a dialogue, where each exchange can comprise of typed exchanges between participants.
+Using 'tidy' data, we can see which words were used the most during the all the conversations, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
 
-```{r fulltidy plots 02}
+```{r fulltidy plots 02/ dont print, eval=FALSE}
 # zipf's law = nl follows log scale, log-log plot w/ rank?
 fulltidy %>% count(Word, sort = TRUE) %>% 
   # filter(n > 500) %>% 
@@ -51,9 +53,9 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
   ggplot(aes(Word,n, fill = as.factor(Role))) +
   geom_col() +
   coord_flip() +
-  labs(title = "Top Words by Role", x = NULL)
+  labs(title = "Top Words by Role", x = NULL, fill = NULL)
 ```
-
+One of the major facets we examine is the role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
 
 ```{r fulltidy plots 04}
 ####Bar Charts (n) By Role####
@@ -68,7 +70,7 @@ fulltidy %>%
   labs(x = NULL, y = 'count',title = "Words by Role") +
   coord_flip()
 ```
-The words each role said most were
+This representation shows the most common words by Role. We'll come back 
 
 ```{r fulltidy plots comment, comment=FALSE}
 # fulltidy %>% 
@@ -105,10 +107,9 @@ The words each role said most were
 #   coord_flip()
 
 ```
-The top words tell us some basic information about our data. We see the name of the charity 'Save [the] Children' and we see the task objective 'donate'. We also see words related to money, 'donation','payment','amount'. There are also affirming words, 'yes','great','good' and other adjectives that would help convince people.
-Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis.
+Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis. We'll go through
 
-## Including Plots
+## Donations Aside
 ```{r annset plots, echo=FALSE}
 # plot multiple things against actual donation
 # plot of actual donation v stated donation
@@ -171,7 +172,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
 ```
-Here we see high levels of fariness and care, indicating a compassionate bunch.
+Here we see high levels of fairness and care, indicating a compassionate bunch.
 
 ```{r fullset plots, echo=FALSE}
 # the Schwartz Portrait [conform, tradition, benevolence, universalism, self_direction, stimulation, hedonism, achievement, power, security]
@@ -182,7 +183,7 @@ full_i_raw %>%
   facet_wrap(~trait) +
   geom_histogram(bins = 6, show.legend = FALSE)
 ```
-The Schartz protrait shows benevolence, self-direction, and universalism
+The Schwartz portrait shows benevolence, self-direction, and universalism
 
 ```{r fullset plots, echo=FALSE}
 # the decision making style [rational, intuitive]
@@ -213,7 +214,7 @@ full_i_raw %>%
 #   facet_wrap(~edu,scales = "free")
 ```
 
-
+Other relevant metrics for traits: 
 ```{r fullset plots, echo=FALSE}
 ##### traits plots ####
 # one (or more) trait plots with other info
@@ -270,6 +271,17 @@ full_i_raw %>%
   ggplot(aes(ideology,n,fill = edu)) +
   geom_col(position = "dodge")
 
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
+  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n)) +
+  geom_col() +
+  facet_wrap(~edu)
+
+
 # # dodge barchart religion/ideology
 # full_i_raw %>% 
 #   count(religion,ideology) %>% 
@@ -288,6 +300,17 @@ full_i_raw %>%
   filter(!is.na(religion), !is.na(ideology)) %>% 
   ggplot(aes(ideology,n,fill = religion)) +
   geom_col(position = "dodge")
+
+full_i_raw %>% 
+  count(religion,ideology) %>% 
+  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
+  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
+  # reoder education levels
+  filter(!is.na(religion), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = religion)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~religion)
+
 
 ```
 

@@ -73,15 +73,15 @@ edu_lo = fulltidy %>%
   filter(sum(n) > 10) %>% # how robust is log-odds
   ungroup %>%
   group_by(edu) %>%
-  slice_max(log_odds_weighted, n = 10)    ## most likely by education
+  slice_max(log_odds_weighted, n = 10) ## most likely by education
 ```
-Log Odds is a Bayesian technique where you compare the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
+Log Odds is a Bayesian technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
 
 ```{r log_odds relgion plot}
 ##### plots #####
 religion_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
-  geom_col() +
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~religion, scales = "free_y") +
   labs(y = NULL)
 ```
@@ -89,8 +89,8 @@ Using log-odds to examine religion, we can learn a lot more about how people
 
 ```{r log_odds}
 sex_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
-  geom_col() +
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~sex, scales = "free") +
   labs(y = NULL)
 ```
@@ -98,8 +98,8 @@ For sex, we can see that [observations]
 
 ```{r log_odds}
 ideology_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
-  geom_col() +
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~ideology, scales = "free_y") +
   labs(y = NULL)
 ```
@@ -107,8 +107,8 @@ With respect to political ideology, [observations]
 
 ```{r log_odds}
 role_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
-  geom_col() +
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~Role, scales = "free_y") +
   labs(y = NULL)
 ```
@@ -116,10 +116,9 @@ role_lo %>%
 
 ```{r log_odds}
 edu_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted))) +
-  geom_col() +
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~edu, scales = "free_y") +
   labs(y = NULL)
-
 ```
 [observations]
