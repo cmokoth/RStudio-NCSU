@@ -1,0 +1,47 @@
+---
+title: "Topic Modeling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r topic model 1}
+
+sparse_words <- fulltidy %>%
+  mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
+  count(Document, Word, sort = TRUE) %>%
+  cast_sparse(Document, Word, n)
+
+library(stm)
+
+convo_model <- stm(sparse_words, K = 5, init.type = "Spectral")
+summary(convo_model)
+
+## per topic per word probabilities
+td_beta <- tidy(convo_model)
+
+td_beta %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~topic, scales = "free_y")
+
+## per document per topic probabilities
+
+td_gamma <- tidy(convo_model, matrix = "gamma",
+                 document_names = rownames(sparse_words))
+
+td_gamma %>%
+  ggplot(aes(gamma, fill = factor(topic))) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(~topic)
+
+## find best number of topics
+## https://juliasilge.com/blog/evaluating-stm/
+## use estimateEffect for Role
+## https://github.com/juliasilge/tidytext/issues/166
+```
+
