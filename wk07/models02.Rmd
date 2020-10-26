@@ -16,7 +16,7 @@ sparse_words <- fulltidy %>%
 
 library(stm)
 
-convo_model <- stm(sparse_words, K = 5, init.type = "Spectral")
+convo_model <- stm(sparse_words, K = 16, init.type = "Spectral")
 summary(convo_model)
 
 ## per topic per word probabilities

@@ -87,7 +87,7 @@ religion_lo %>%
 ```
 Using log-odds to examine religion, we can learn a lot more about how people 
 
-```{r log_odds}
+```{r log_odds sex}
 sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
   geom_col(show.legend = FALSE) +
@@ -96,7 +96,7 @@ sex_lo %>%
 ```
 For sex, we can see that [observations]
 
-```{r log_odds}
+```{r log_odds ideology}
 ideology_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
   geom_col(show.legend = FALSE) +
@@ -105,20 +105,20 @@ ideology_lo %>%
 ```
 With respect to political ideology, [observations]
 
-```{r log_odds}
+```{r log_odds role}
 role_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~Role, scales = "free_y") +
   labs(y = NULL)
 ```
-[observations]
+[observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
 
-```{r log_odds}
+```{r log_odds edu}
 edu_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~edu, scales = "free_y") +
   labs(y = NULL)
 ```
-[observations]
+Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate)
