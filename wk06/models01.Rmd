@@ -16,39 +16,167 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ## R Markdown
 ```{r values modelling}
-value_freq <- fulltidy %>%
-  filter(!is.na(conform)) %>%
-  count(conform, Word) %>%
-  complete(conform, Word, fill = list(n = 0)) %>%
-  group_by(conform) %>%
+agree_freq <- fulltidy %>%
+  filter(!is.na(agreeable)) %>%
+  count(agreeable, Word) %>%
+  complete(agreeable, Word, fill = list(n = 0)) %>%
+  group_by(agreeable) %>%
   mutate(value_total = sum(n)) %>%
   ungroup() %>%
   group_by(Word) %>%
   filter(sum(n) > 50) %>%
   ungroup()
 
-value_slopes <- value_freq %>%
-  nest(tiny_tibbles = c(conform, n, value_total)) %>%
-  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ conform, data = ., family = "binomial"))) %>%
+agree_slopes <- agree_freq %>%
+  nest(tiny_tibbles = c(agreeable, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ agreeable, data = ., family = "binomial"))) %>%
   mutate(models = map(models, tidy)) %>%
   select(-tiny_tibbles) %>%
   unnest(models) %>%
-  filter(term == "conform") %>%
+  filter(term == "agreeable") %>%
   mutate(p.value = p.adjust(p.value))
 
-value_slopes %>%
+agree_slopes %>%
   slice_min(p.value, n = 9) %>%
-  inner_join(value_freq) %>%
-  ggplot(aes(conform, n / value_total)) +
+  inner_join(agree_freq) %>%
+  ggplot(aes(agreeable, n / value_total)) +
   geom_point() +
   geom_smooth(method = "lm") +
   facet_wrap(~Word) +
   scale_y_continuous(labels = scales::percent_format()) +
-  labs(x = "Conformity score",
+  labs(x = "Agreeableness score",
        y = "Word frequency")
 ```
 
 ```{r values and traits}
+conscience_freq <- fulltidy %>%
+  filter(!is.na(conscientious)) %>%
+  count(conscientious, Word) %>%
+  complete(conscientious, Word, fill = list(n = 0)) %>%
+  group_by(conscientious) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+conscience_slopes <- conscience_freq %>%
+  nest(tiny_tibbles = c(conscientious, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ conscientious, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "conscientious") %>%
+  mutate(p.value = p.adjust(p.value))
+
+conscience_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(conscience_freq) %>%
+  ggplot(aes(conscientious, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Conscientiousness score",
+       y = "Word frequency")
 
 ```
 
+```{r values and traits}
+extrovert_freq <- fulltidy %>%
+  filter(!is.na(extrovert)) %>%
+  count(extrovert, Word) %>%
+  complete(extrovert, Word, fill = list(n = 0)) %>%
+  group_by(extrovert) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+extrovert_slopes <- extrovert_freq %>%
+  nest(tiny_tibbles = c(extrovert, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ extrovert, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "extrovert") %>%
+  mutate(p.value = p.adjust(p.value))
+
+extrovert_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(extrovert_freq) %>%
+  ggplot(aes(extrovert, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Extroversion score",
+       y = "Word frequency")
+```
+
+```{r values modelling}
+neurotic_freq <- fulltidy %>%
+  filter(!is.na(neurotic)) %>%
+  count(neurotic, Word) %>%
+  complete(neurotic, Word, fill = list(n = 0)) %>%
+  group_by(neurotic) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+neurotic_slopes <- neurotic_freq %>%
+  nest(tiny_tibbles = c(neurotic, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ neurotic, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "neurotic") %>%
+  mutate(p.value = p.adjust(p.value))
+
+neurotic_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(neurotic_freq) %>%
+  ggplot(aes(neurotic, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Neuroticsm score",
+       y = "Word frequency")
+```
+
+```{r values and traits}
+open_freq <- fulltidy %>%
+  filter(!is.na(open)) %>%
+  count(open, Word) %>%
+  complete(open, Word, fill = list(n = 0)) %>%
+  group_by(open) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+open_slopes <- open_freq %>%
+  nest(tiny_tibbles = c(open, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ open, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "open") %>%
+  mutate(p.value = p.adjust(p.value))
+
+open_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(open_freq) %>%
+  ggplot(aes(open, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Openess score",
+       y = "Word frequency")
+```

@@ -16,7 +16,7 @@ sparse_words <- fulltidy %>%
 
 library(stm)
 
-convo_model <- stm(sparse_words, K = 16, init.type = "Spectral")
+convo_model <- stm(sparse_words, K = 40, init.type = "Spectral")
 summary(convo_model)
 
 ## per topic per word probabilities
@@ -43,5 +43,40 @@ td_gamma %>%
 ## https://juliasilge.com/blog/evaluating-stm/
 ## use estimateEffect for Role
 ## https://github.com/juliasilge/tidytext/issues/166
+```
+
+```{r}
+plan(multiprocess)
+
+many_models <- data_frame(K = c(10,15,20,25,35,45,55,70,85,100)) %>%
+  mutate(topic_model = future_map(K, ~stm(sparse_words, K = .,
+                                          verbose = FALSE)))
+
+heldout <- make.heldout(sparse_words)
+
+k_result <- many_models %>%
+  mutate(exclusivity = map(topic_model, exclusivity),
+         semantic_coherence = map(topic_model, semanticCoherence, sparse_words),
+         eval_heldout = map(topic_model, eval.heldout, heldout$missing),
+         residual = map(topic_model, checkResiduals, sparse_words),
+         bound =  map_dbl(topic_model, function(x) max(x$convergence$bound)),
+         lfact = map_dbl(topic_model, function(x) lfactorial(x$settings$dim$K)),
+         lbound = bound + lfact,
+         iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
+
+# k_result
+
+k_result %>%
+  transmute(K,
+            `Lower bound` = lbound,
+            Residuals = map_dbl(residual, "dispersion"),
+            `Semantic coherence` = map_dbl(semantic_coherence, mean),
+            `Held-out likelihood` = map_dbl(eval_heldout, "expected.heldout")) %>%
+  gather(Metric, Value, -K) %>%
+  ggplot(aes(K, Value, color = Metric)) +
+  geom_line(size = 1.5, alpha = 0.7, show.legend = FALSE) +
+  facet_wrap(~Metric, scales = "free_y") +
+  labs(x = "K (number of topics)",
+       y = NULL)
 ```
 
