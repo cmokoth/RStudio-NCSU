@@ -1,11 +1,987 @@
 ---
 title: "modelling persuasion"
-output: html_document
+author: "Christian Okoth"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    theme: simplex
+    toc: yes
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+knitr::opts_chunk$set(cache = TRUE, cache.lazy = FALSE, warning = FALSE, 
+                      message = FALSE, echo = TRUE, dpi = 180,
+                      fig.width = 8, fig.height = 5)
+library(ggplot2)
+library(ggthemes)
+# set theme
+theme_set(theme_solarized())
+```
+## Introduction
+
+Introduction!
+
+
+
+```{r library}
+library(tidyverse)
+library(readxl)
+library(tidytext)
+library(broom)
+library(stopwords)
+library(dplyr)
+library(skimr)
+library(tidylo)
+library(ggthemes)
+library(furrr)
+library(future)
+library(stm)
 ```
 
-## R Markdown
+## Data Import & Tidying
 
+The raw datasets the basics. here's where I got it/how I did it process `full_d_raw` and `full_i_raw`
+see in text read in code
+```{r read1}
+# full_d for the full dialog, not annotated
+full_d_raw = read_csv('data/FullData/full_dialog.csv',
+         col_names = TRUE)
+
+full_i_raw = read_csv('data/FullData/full_info.csv',
+         col_names = TRUE) %>% 
+  rename_with(~str_remove(.,"\\.x$"))
+# anonymous fn ? regular expression (python/perl/real programming)
+```
+
+more words to describe interesting things or essential information (what's in here?) err on the side of text rather than comments
+
+```{r read3}
+fullset = full_d_raw %>% 
+  left_join(full_i_raw) %>% 
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 = persuader, 1 = persuadee)
+    Dialogue = Unit,
+    User = B3,
+    NumTurn = B7,
+    Donation = B6,
+    everything()
+    )
+
+full_d_raw = full_d_raw %>% 
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 = persuader, 1 = persuadee)
+    Dialogue = Unit
+  )
+```
+
+
+```{r read2}
+# ann_d for the full dialog, with annotations
+ann_d_raw = read_xlsx('data/AnnotatedData/300_dialog.xlsx',
+         col_names = TRUE)
+# ann_i for the corresponding index file
+ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
+         col_names = TRUE)
+```
+
+
+```{r read4}
+annset = ann_d_raw %>% 
+  left_join(ann_i_raw) %>%
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 means persuader, 1 means persuadee)
+    Sentence = Unit,
+    User = B3,
+    Donation = B6,
+    IntDonation = B5,
+    NumTurn = B7,
+    # Label1 = # concat(er_label_1,ee_label_1),
+    # Label2 = # concat(er_label_2,ee_label_2),
+    Neg = neg,
+    Neu = neu,
+    Pos = pos,
+    everything()
+  )
+
+# annset = ann_d %>% select()
+###
+
+```
+
+```{r exit}
+knitr::knit_exit()
+```
+
+
+
+```{r tidyer, include=FALSE, message=FALSE}
+# What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
+
+fulltidy = fullset %>% 
+  select(ConvoId,
+         User,
+         Turn,
+         Role,
+         Dialogue) 
+# putting the words in un_nest
+fulltidy = full_d_raw %>% 
+  inner_join(fullset) %>% 
+    mutate(
+    religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), labels = c("Catholic","Protestant","Atheist","Other religion")), 
+    sex = factor(sex, levels = c("Male","Female","Other"),labels = c("Male","Female","Other Genders")), 
+    ideology = factor(ideology, levels =  c("Conservative","Moderate","Liberal"), labels = c("Conservative","Moderate","Liberal"), ordered = FALSE), 
+    Role = factor(Role, levels = c("0","1"),labels = c("Persuader","Persuadee")), # adding labels!!
+    edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), labels = c("Less than four-year college","College","Postgraduate"))
+  ) %>% 
+  unnest_tokens(Word,Dialogue) %>% 
+  # pulling out irrelevant words
+  anti_join(get_stopwords(),by = c("Word" = "word")) 
+
+```
+
+## Exploratory Data Analysis
+
+Using tidy data, we can explore text data and unsupervised learning to gain a better understanding of our dataset.
+For this project, we are using MIT's Persuasion for Good dataset </link here>
+
+```{r fulltidy_plots01}
+# looking at individual sentences/instances to look at how standard the data are
+fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
+# most popular words
+fulltidy %>% count(Word, sort = TRUE) %>% 
+  filter(n > 1000) %>% 
+  # reorder words by count
+  ggplot(aes(fct_reorder(Word, n),n)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = NULL, title = "Most Common Words in Dialogue")
+```
+Our data are held as full exchanges in a dialogue, where each exchange can comprise of typed exchanges between participants.
+Using 'tidy' data, we can see which words were used the most during the all the conversations, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
+
+```{r fulltidy_plots03}
+fulltidy %>% count(Word,Role, sort = TRUE) %>% 
+  # filter(n > 500) %>% 
+  slice_max(n,n = 25) %>% 
+  ggplot(aes(Word,n, fill = as.factor(Role))) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Top Words by Role", x = NULL, fill = NULL)
+```
+One of the major facets we examine is the role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
+
+```{r fulltidy_plots04}
+####Bar Charts (n) By Role####
+
+fulltidy %>% 
+  count(Word,Role,sort = TRUE) %>% 
+  slice_max(n,n = 20) %>% 
+  ggplot(aes(Word,n)) +
+  geom_col(aes(fill = n),show.legend = FALSE) +
+#  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
+  facet_wrap(~Role, scales = "free") +
+  labs(x = NULL, y = 'count',title = "Words by Role") +
+  coord_flip()
+```
+This representation shows the most common words by Role. We'll come back 
+
+Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis. We'll go through
+
+### Donations Aside
+```{r annset_plots, echo=FALSE}
+# plot multiple things against actual donation
+# plot of actual donation v stated donation
+# best way to represent the donation amount and the intended donation amount
+annset %>% 
+#  filter(IntDonation < 5000) %>% 
+  ggplot() +
+  geom_boxplot(aes(IntDonation))
+annset %>%
+  filter(IntDonation < 75) %>% 
+  ggplot() +
+  geom_boxplot(aes(Donation-IntDonation))
+
+annset %>% 
+  ggplot(aes(IntDonation,Donation)) +
+  geom_jitter()
+
+annset %>% 
+  #difference between IntDonation and Donation
+  filter(IntDonation < 75) %>% 
+  ggplot(aes(Donation-IntDonation)) +
+  geom_histogram(binwidth = 10) 
+
+
+annset %>% 
+  #difference between IntDonation and Donation
+  filter(IntDonation < 75) %>% 
+  ggplot(aes(Donation-IntDonation)) +
+  geom_histogram(bins = 15) 
+
+```
+Most people actually donated how much they pledged to donate. As expected, some donated less. There are two outliers with respect to x, one where someone promise to donate \$10,000 but didn't, and another where someone promised to donate \$500 and didn't. A kind soul donated more than they initially pledged. 
+
+### traits and values
+```{r fullset_plots, echo=FALSE}
+# distributions for each personality trait (one of those bar plots that is stacked/filled)
+
+# utterances per conversation
+fullset %>% 
+  count(ConvoId) %>% 
+  ggplot(aes(n)) +
+  geom_histogram()
+##### values plots #####
+# the big five [extrovert, agreeable, conscientious, neurotic, open]
+full_i_raw %>% 
+  select(B3,extrovert:open) %>% 
+  pivot_longer(extrovert:open,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 5, show.legend = FALSE) +
+  labs(title = 'the big five')
+```
+Here we have our distributions of personality traits. This study collected data for three major personality scores: the big five, the schwartz and the moral foundations. The big five show us that our sample has very agreeable, extroverted, and concientious participants. They also skew towards open. 
+
+```{r moral_plot, echo=FALSE}
+# the moral foundations [care, fairness, loyalty, authority, purity, freedom]
+full_i_raw %>% 
+  select(B3,care:freedom) %>% 
+  pivot_longer(care:freedom,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 6, show.legend = FALSE)
+```
+Here we see high levels of fairness and care, indicating a compassionate bunch.
+
+```{r schwartz_plot, echo=FALSE}
+# the Schwartz Portrait [conform, tradition, benevolence, universalism, self_direction, stimulation, hedonism, achievement, power, security]
+full_i_raw %>% 
+  select(B3,conform:security) %>% 
+  pivot_longer(conform:security,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 6, show.legend = FALSE)
+```
+The Schwartz portrait shows benevolence, self-direction, and universalism
+
+```{r decision_plot, echo=FALSE}
+# the decision making style [rational, intuitive]
+full_i_raw %>% 
+  select(B3,rational:intuitive) %>% 
+  pivot_longer(rational:intuitive,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 5, show.legend = FALSE)
+
+ #####comments####
+# # 10 baby plots of value plots
+# full_i_raw %>% 
+#   select(B3,fairness:self_direction) %>% 
+#   pivot_longer(fairness:self_direction,names_to = "trait", values_to = "score") %>% 
+#   ggplot(aes(score, fill = trait)) +
+#   facet_wrap(~trait) +
+#   geom_histogram(bins = 6, show.legend = FALSE)
+
+# # 3 barcharts for education/ideology
+# full_i_raw %>% 
+#   count(edu,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reoder education levels
+#   filter(!is.na(edu), !is.na(ideology)) %>% 
+#   ggplot(aes(ideology,n,fill = ideology)) +
+#   geom_col(show.legend = FALSE) +
+#   facet_wrap(~edu,scales = "free")
+```
+
+Other relevant metrics for traits: 
+```{r traits_plot0, echo=FALSE}
+##### traits plots ####
+# one (or more) trait plots with other info
+# more exploratory plots age <dbl>, sex <chr>, race <chr>, edu <chr>, marital <chr>, employment <chr>, income <dbl>, religion <chr>, ideology <chr>
+
+# age/sex
+full_i_raw %>%
+  filter(!is.na(sex)) %>% 
+  ggplot(aes(age)) +
+  geom_histogram(bins = 10) +
+  facet_wrap(~sex)
+```
+
+
+```{r traits_plot01, echo=FALSE}
+# income/employment
+full_i_raw %>%
+  filter(!is.na(employment),!is.na(income)) %>% 
+  ggplot(aes(income,fill = marital)) +
+  geom_histogram(binwidth = 1.5) +
+  facet_wrap(~employment) +
+  coord_flip()
+```
+
+
+```{r traits_plot02, echo=FALSE}
+# religion/ideology
+full_i_raw %>%
+  count(religion,ideology) %>% 
+  filter(!is.na(ideology),!is.na(religion)) %>% 
+  ggplot(aes(ideology,n)) +
+  geom_col() +
+  facet_wrap(~religion)
+```
+
+
+```{r traits_plot03, echo=FALSE}
+# # stacked barchart education/ideology
+# full_i_raw %>% 
+#   count(edu,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reorder education levels
+#   filter(!is.na(edu), !is.na(ideology)) %>% 
+#   ggplot(aes(ideology,n,fill = edu)) +
+#   geom_col()
+
+# dodge barchart ideology/education
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
+  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = edu)) +
+  geom_col(position = "dodge")
+
+full_i_raw %>% 
+  count(edu,ideology) %>% 
+  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
+  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
+  # reoder education levels
+  filter(!is.na(edu), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n)) +
+  geom_col() +
+  facet_wrap(~edu)
+
+
+# # dodge barchart religion/ideology
+# full_i_raw %>% 
+#   count(religion,ideology) %>% 
+#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
+#   # reoder education levels
+#   filter(!is.na(religion), !is.na(ideology)) %>% 
+#   ggplot(aes(religion,n,fill = ideology)) +
+#   geom_col(position = "dodge")
+
+# dodge barchart ideology/religion
+full_i_raw %>% 
+  count(religion,ideology) %>% 
+  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
+  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
+  # reoder education levels
+  filter(!is.na(religion), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = religion)) +
+  geom_col(position = "dodge")
+
+full_i_raw %>% 
+  count(religion,ideology) %>% 
+  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
+  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
+  # reoder education levels
+  filter(!is.na(religion), !is.na(ideology)) %>% 
+  ggplot(aes(ideology,n,fill = religion)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~religion)
+
+
+```
+
+
+## Word Laws
+Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
+```{r wordcount}
+############## Group = ConvoId #########
+# two group by, one by conversation and one by total words in the sample
+words1 = fullset %>% 
+  select(ConvoId,
+         Dialogue,
+         NumTurn
+        ) %>% 
+  unnest_tokens(Word,Dialogue) %>% 
+  count(ConvoId,Word,sort = TRUE, name = "Count")
+
+words2 = words1 %>% 
+  group_by(ConvoId) %>% 
+  summarize(ctotal = sum(Count))
+
+wordcount <- left_join(words1, words2)
+
+############# Group = Corpus #######
+# group by total words in the sample
+wordcount1 = fullset %>%
+  select(ConvoId,
+         Dialogue,
+         NumTurn
+        ) %>%
+  unnest_tokens(Word,Dialogue) %>%
+  count(Word,sort = TRUE, name = "Count")
+
+# words22 = words11 %>%
+#   summarize(ctotal = sum(Count))
+# 
+# wordcount1 <- left_join(words11, words22)
+
+# these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
+
+# ####### Group = NumSet ######
+# # two group by, one by number of turns and one by total words in the sample
+# words111 = fullset %>% 
+#   select(ConvoId,
+#          Dialogue,
+#          NumTurn
+#         ) %>% 
+#   unnest_tokens(Word,Dialogue) %>% 
+#   count(NumTurn,Word,sort = TRUE, name = "Count")
+# 
+# words222 = words111 %>% 
+#   group_by(NumTurn) %>% 
+#   summarize(ctotal = sum(Count))
+# 
+# wordcount2 <- left_join(words111, words222)
+
+```
+
+
+What do the distributions of the words look like compared to their conversation?
+```{r word_frequency00}
+###########ConvoId#### 
+wordcount %>% 
+  ggplot(aes(Count/ctotal)) +
+  geom_histogram(bins = 15) +
+  labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words') 
+```
+
+
+```{r word_frequency01}
+###########Corpus#####
+wordcount1 %>% 
+  ggplot(aes(Count)) +
+  geom_histogram(bins = 20) +
+  scale_x_log10() +
+  labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words')
+```
+
+## Rank and Frequency
+```{r frequency_rank}
+# by convo_id
+freq_by_rank <- wordcount %>%
+  group_by(ConvoId) %>%
+  mutate(rank = row_number(),
+         `term frequency` = Count/ctotal)
+
+# corpus, no by variable
+freq_by_rank1 <- wordcount1 %>% 
+  mutate(rank = row_number(),
+         `term frequency` = Count)
+
+# freq_by_rank2 <- wordcount2 %>% 
+#   group_by(NumTurn) %>% 
+#   mutate(rank = row_number(), 
+#          `term frequency` = Count/ctotal)
+# summary(log10(freq_by_rank2[6]))
+```
+
+
+```{r zipfslaw00}
+# Zipf's law plot - group by ConvoId
+freq_by_rank %>%
+  ggplot(aes(rank, `term frequency`, color = ConvoId)) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+# extremely noisy! not improved by removing 'color = '
+```
+
+
+```{r zipfslaw01}
+# Zipf's law plot - corpus
+freq_by_rank1 %>% 
+  ggplot(aes(rank, `term frequency`)) + 
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10()
+# very straight
+```
+
+
+```{r zipfslaw02}
+# # Zipf's law plot - group by NumTurn
+# freq_by_rank2 %>% 
+#   ggplot(aes(rank, `term frequency`, color = as.factor(NumTurn))) + 
+#   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+#   scale_x_log10() +
+#   scale_y_log10()
+# # only seven groups rather than 1,000
+
+
+# # 
+# rank_subset = freq_by_rank %>% 
+#   filter(rank < 100, # what would be the middle range of this data?
+#          rank > 5)
+# 
+# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
+
+rank_subset = freq_by_rank1 %>% 
+  filter(rank > 100) # what would be the middle range of this data?
+
+rank_model1 = lm(log10(`term frequency`) ~ log10(rank), data = freq_by_rank1)
+
+rank_model11 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
+
+# rank_subset2 = freq_by_rank2 %>% 
+#   filter(rank < 1000,
+#          rank > 10)
+# 
+# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
+```
+
+## Term Frequency - Inverse Document Frequency
+Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
+We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
+```{r tf_idf}
+# there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
+# rank groupd by ConvoId
+ranktf = freq_by_rank %>% 
+  # mutate(total = 352376) %>% 
+  bind_tf_idf(Word,ConvoId,Count)
+# by utterance
+
+# rank grouped by corpus (not extremely efficient)
+# ranktf1 = freq_by_rank %>% 
+#   mutate(total = 352376) %>% 
+#   bind_tf_idf(Word,total,Count)
+
+# checking her out
+ranktf %>%
+  select(-rank) %>%
+  arrange(desc(tf_idf))
+# checking HER out
+# ranktf1 %>%
+#   select(-rank) %>%
+#   arrange(desc(tf_idf))
+
+# not working the way I want?
+# ranktf %>% 
+#   slice_max(tf_idf,n = 10) %>% 
+#   ggplot(aes(tf_idf,Word)) +
+#   geom_col()
+
+# grouped by role - top 10 words by role
+fulltidy %>% 
+  count(Role,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word, Role,n) %>% 
+  arrange(-tf_idf) %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+fulltidy %>% 
+  # mutate(Utterance = row_number()) %>% 
+  unite('ConvoId', ConvoId,Role,sep = '--',remove = FALSE) %>% 
+  count(ConvoId,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word, ConvoId,n) %>% 
+  arrange(-tf_idf) %>% 
+  separate(ConvoId,into = c('ConvoId','Role'),sep = '--') %>% 
+  filter(n > 10) %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+
+convo_tf_idf = fulltidy %>% 
+  # mutate(Utterance = row_number()) %>% 
+  unite('ConvoID', ConvoId,Role,sep = '--',remove = FALSE) %>% 
+  count(ConvoID,Word, sort = TRUE) %>% 
+  bind_tf_idf(Word,ConvoID,n) %>% 
+  arrange(-tf_idf) %>% 
+  # filter(n > 10) %>% 
+  separate(ConvoID,into = c('ConvoId','Role'),sep = '--') %>% 
+  group_by(Role) %>% 
+  slice_max(tf_idf, n = 10)
+
+role_words = convo_tf_idf %>% 
+  group_by(Word) %>% 
+  filter(sum(n) > 10) %>% # only keep words used over 50 times total
+  ungroup() %>% 
+  group_by(Role,Word) %>% # most distinct words by role
+  # distinct(Word, Role, .keep_all = TRUE)
+  # slice_max(tf_idf,n = 15)
+  summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
+  group_by(Role) %>% 
+  slice_max(tf_idf,n = 15)
+
+role_words %>% 
+  ggplot(aes(tf_idf,Word)) +
+  geom_col() +
+  facet_wrap(~Role, scales = "free_y")
+
+```
+tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
+Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which **words** stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
+The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
+
+## Log-Odds
+```{r log_odds transform}
+# log-odds by interest trait: religion, sex, ideology, role, education
+# log-odds grouped by religion
+religion_lo = fulltidy %>%
+  filter(!is.na(religion)) %>%
+  count(Word, religion, sort = TRUE) %>%
+  bind_log_odds(religion, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(religion) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by religion
+
+# log-odds grouped by sex
+sex_lo = fulltidy %>%
+  filter(!is.na(sex)) %>%
+  count(Word, sex, sort = TRUE) %>%
+  bind_log_odds(sex, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(sex) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by sex
+
+# log-odds grouped by ideology
+ideology_lo = fulltidy %>%
+  filter(!is.na(ideology)) %>%
+  count(Word, ideology, sort = TRUE) %>%
+  bind_log_odds(ideology, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(ideology) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by ideology
+
+# log-odds grouped by role
+role_lo = fulltidy %>%
+  filter(!is.na(Role)) %>%
+  count(Word, Role, sort = TRUE) %>%
+  bind_log_odds(Role, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(Role) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by role
+
+# log-odds grouped by role
+edu_lo = fulltidy %>%
+  filter(!is.na(edu)) %>%
+  count(Word, edu, sort = TRUE) %>%
+  bind_log_odds(edu, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(edu) %>%
+  slice_max(log_odds_weighted, n = 10) ## most likely by education
+```
+Log Odds is a Bayesian technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
+
+```{r log_odds relgion plot}
+##### plots #####
+religion_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~religion, scales = "free_y") +
+  labs(y = NULL)
+```
+Using log-odds to examine religion, we can learn a lot more about how people 
+
+```{r log_odds sex}
+sex_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sex, scales = "free") +
+  labs(y = NULL)
+```
+For sex, we can see that [observations]
+
+```{r log_odds ideology}
+ideology_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ideology, scales = "free_y") +
+  labs(y = NULL)
+```
+With respect to political ideology, [observations]
+
+```{r log_odds role}
+role_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~Role, scales = "free_y") +
+  labs(y = NULL)
+```
+[observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
+
+```{r log_odds edu}
+edu_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~edu, scales = "free_y") +
+  labs(y = NULL)
+```
+Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate)
+
+## Values Modelling
+```{r values_modelling}
+agree_freq <- fulltidy %>%
+  filter(!is.na(agreeable)) %>%
+  count(agreeable, Word) %>%
+  complete(agreeable, Word, fill = list(n = 0)) %>%
+  group_by(agreeable) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+agree_slopes <- agree_freq %>%
+  nest(tiny_tibbles = c(agreeable, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ agreeable, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "agreeable") %>%
+  mutate(p.value = p.adjust(p.value))
+
+agree_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(agree_freq) %>%
+  ggplot(aes(agreeable, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Agreeableness score",
+       y = "Word frequency")
+```
+
+```{r conscience}
+conscience_freq <- fulltidy %>%
+  filter(!is.na(conscientious)) %>%
+  count(conscientious, Word) %>%
+  complete(conscientious, Word, fill = list(n = 0)) %>%
+  group_by(conscientious) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+conscience_slopes <- conscience_freq %>%
+  nest(tiny_tibbles = c(conscientious, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ conscientious, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "conscientious") %>%
+  mutate(p.value = p.adjust(p.value))
+
+conscience_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(conscience_freq) %>%
+  ggplot(aes(conscientious, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Conscientiousness score",
+       y = "Word frequency")
+
+```
+
+```{r extrovert}
+extrovert_freq <- fulltidy %>%
+  filter(!is.na(extrovert)) %>%
+  count(extrovert, Word) %>%
+  complete(extrovert, Word, fill = list(n = 0)) %>%
+  group_by(extrovert) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+extrovert_slopes <- extrovert_freq %>%
+  nest(tiny_tibbles = c(extrovert, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ extrovert, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "extrovert") %>%
+  mutate(p.value = p.adjust(p.value))
+
+extrovert_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(extrovert_freq) %>%
+  ggplot(aes(extrovert, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Extroversion score",
+       y = "Word frequency")
+```
+
+```{r neurotic}
+neurotic_freq <- fulltidy %>%
+  filter(!is.na(neurotic)) %>%
+  count(neurotic, Word) %>%
+  complete(neurotic, Word, fill = list(n = 0)) %>%
+  group_by(neurotic) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+neurotic_slopes <- neurotic_freq %>%
+  nest(tiny_tibbles = c(neurotic, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ neurotic, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "neurotic") %>%
+  mutate(p.value = p.adjust(p.value))
+
+neurotic_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(neurotic_freq) %>%
+  ggplot(aes(neurotic, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Neuroticsm score",
+       y = "Word frequency")
+```
+
+```{r open}
+open_freq <- fulltidy %>%
+  filter(!is.na(open)) %>%
+  count(open, Word) %>%
+  complete(open, Word, fill = list(n = 0)) %>%
+  group_by(open) %>%
+  mutate(value_total = sum(n)) %>%
+  ungroup() %>%
+  group_by(Word) %>%
+  filter(sum(n) > 50) %>%
+  ungroup()
+
+open_slopes <- open_freq %>%
+  nest(tiny_tibbles = c(open, n, value_total)) %>%
+  mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ open, data = ., family = "binomial"))) %>%
+  mutate(models = map(models, tidy)) %>%
+  select(-tiny_tibbles) %>%
+  unnest(models) %>%
+  filter(term == "open") %>%
+  mutate(p.value = p.adjust(p.value))
+
+open_slopes %>%
+  slice_min(p.value, n = 9) %>%
+  inner_join(open_freq) %>%
+  ggplot(aes(open, n / value_total)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~Word) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = "Openess score",
+       y = "Word frequency")
+```
+
+## Topic Modelling
+```{r topic_model_1}
+
+sparse_words <- fulltidy %>%
+  mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
+  count(Document, Word, sort = TRUE) %>%
+  cast_sparse(Document, Word, n)
+
+library(stm)
+
+convo_model <- stm(sparse_words, K = 40, init.type = "Spectral")
+summary(convo_model)
+
+## per topic per word probabilities
+td_beta <- tidy(convo_model)
+
+td_beta %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~topic, scales = "free_y")
+
+## per document per topic probabilities
+
+td_gamma <- tidy(convo_model, matrix = "gamma",
+                 document_names = rownames(sparse_words))
+
+td_gamma %>%
+  ggplot(aes(gamma, fill = factor(topic))) +
+  geom_histogram(show.legend = FALSE) +
+  facet_wrap(~topic)
+
+```
+
+
+```{r topic_model_2}
+plan(multiprocess)
+
+many_models <- data_frame(K = c(10,15,20,25,35,45,55,70,85,100)) %>%
+  mutate(topic_model = future_map(K, ~stm(sparse_words, K = .,
+                                          verbose = FALSE)))
+
+heldout <- make.heldout(sparse_words)
+
+k_result <- many_models %>%
+  mutate(exclusivity = map(topic_model, exclusivity),
+         semantic_coherence = map(topic_model, semanticCoherence, sparse_words),
+         eval_heldout = map(topic_model, eval.heldout, heldout$missing),
+         residual = map(topic_model, checkResiduals, sparse_words),
+         bound =  map_dbl(topic_model, function(x) max(x$convergence$bound)),
+         lfact = map_dbl(topic_model, function(x) lfactorial(x$settings$dim$K)),
+         lbound = bound + lfact,
+         iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
+
+# k_result
+
+k_result %>%
+  transmute(K,
+            `Lower bound` = lbound,
+            Residuals = map_dbl(residual, "dispersion"),
+            `Semantic coherence` = map_dbl(semantic_coherence, mean),
+            `Held-out likelihood` = map_dbl(eval_heldout, "expected.heldout")) %>%
+  gather(Metric, Value, -K) %>%
+  ggplot(aes(K, Value, color = Metric)) +
+  geom_line(size = 1.5, alpha = 0.7, show.legend = FALSE) +
+  facet_wrap(~Metric, scales = "free_y") +
+  labs(x = "K (number of topics)",
+       y = NULL)
+```
+LB: Convergence
+SC: Topic Quality
+K =? 60-70

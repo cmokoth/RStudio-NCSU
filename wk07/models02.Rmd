@@ -7,6 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Topic Modelling
 ```{r topic model 1}
 
 sparse_words <- fulltidy %>%

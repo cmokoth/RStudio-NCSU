@@ -14,7 +14,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ```
 
-## R Markdown
+## Values Modelling
 ```{r values modelling}
 agree_freq <- fulltidy %>%
   filter(!is.na(agreeable)) %>%
