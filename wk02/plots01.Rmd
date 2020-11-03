@@ -143,7 +143,7 @@ annset %>%
 ```
 Most people actually donated how much they pledged to donate. As expected, some donated less. There are two outliers with respect to x, one where someone promise to donate \$10,000 but didn't, and another where someone promised to donate \$500 and didn't. A kind soul donated more than they initially pledged. 
 
-```{r fullset plots, echo=FALSE}
+```{r fullset_plots, echo=FALSE}
 # distributions for each personality trait (one of those bar plots that is stacked/filled)
 
 # utterances per conversation
@@ -161,7 +161,7 @@ full_i_raw %>%
   geom_histogram(bins = 5, show.legend = FALSE) +
   labs(title = 'the big five')
 ```
-Here we have our distributions of personality traits. This study collected data for three major personality scores: the big five, the schwartz and the moral foundations. The big five show us that our sample has very agreeable, extroverted, and concientious participants. They also skew towards open. 
+Here we have our distributions of personality traits. This study collected data for three major personality scores: the big five, the Schwartz and the moral foundations. The big five show us that our sample has very agreeable, extroverted, and conscientious participants. They also skew towards open. 
 
 ```{r fullset plots, echo=FALSE}
 # the moral foundations [care, fairness, loyalty, authority, purity, freedom]

@@ -111,3 +111,20 @@ fulltidy = full_d_raw %>%
 
 ```
 
+```{r export}
+
+annset %>% 
+  filter(Donation-IntDonation > 0,
+         NumTurn == 10) %>% 
+  slice_sample(prop = .25) %>%
+  pull(ConvoId)
+
+annset %>% 
+  filter(Donation-IntDonation > 0, Role == 1) %>% 
+  select(ConvoId,User,Donation,IntDonation,NumTurn) %>% 
+  mutate(NumTurn = factor(NumTurn)) %>% 
+  group_by(NumTurn) %>% 
+  summarize()
+
+```
+

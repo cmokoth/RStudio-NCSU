@@ -79,5 +79,6 @@ k_result %>%
   facet_wrap(~Metric, scales = "free_y") +
   labs(x = "K (number of topics)",
        y = NULL)
+## between 60-70
 ```
 

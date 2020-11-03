@@ -2,12 +2,12 @@
 title: "modelling persuasion"
 author: "Christian Okoth"
 output:
-  word_document:
-    toc: yes
   html_document:
     theme: simplex
     toc: yes
     toc_float: yes
+  word_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -16,26 +16,27 @@ knitr::opts_chunk$set(cache = TRUE, cache.lazy = FALSE, warning = FALSE,
                       message = FALSE, echo = TRUE, dpi = 180,
                       fig.width = 8, fig.height = 5)
 library(ggplot2)
+set.seed(2020)
 library(ggthemes)
 # set theme
-theme_set(theme_solarized())
+theme_set(theme_solarized(light = FALSE))
 ```
 ## Introduction
 
 Introduction!
 
-
-
 ```{r library}
+# tidying
 library(tidyverse)
 library(readxl)
-library(tidytext)
 library(broom)
-library(stopwords)
 library(dplyr)
+# text analysis
+library(stopwords)
+library(tidytext)
 library(skimr)
 library(tidylo)
-library(ggthemes)
+# unsupervised learning
 library(furrr)
 library(future)
 library(stm)
@@ -43,8 +44,9 @@ library(stm)
 
 ## Data Import & Tidying
 
-The raw datasets the basics. here's where I got it/how I did it process `full_d_raw` and `full_i_raw`
+The data for this project come from MIT's Persuasion for Good dataset </link here> [the name and hyperlink]. I pulled the raw data from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information about each participant. The raw datasets the basics. here's where I got it/how I did it process 
 see in text read in code
+
 ```{r read1}
 # full_d for the full dialog, not annotated
 full_d_raw = read_csv('data/FullData/full_dialog.csv',
@@ -56,9 +58,13 @@ full_i_raw = read_csv('data/FullData/full_info.csv',
 # anonymous fn ? regular expression (python/perl/real programming)
 ```
 
+Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there.
+
+
 more words to describe interesting things or essential information (what's in here?) err on the side of text rather than comments
 
 ```{r read3}
+## import data
 fullset = full_d_raw %>% 
   left_join(full_i_raw) %>% 
   select(
@@ -72,6 +78,7 @@ fullset = full_d_raw %>%
     everything()
     )
 
+## simplifying reference to columns
 full_d_raw = full_d_raw %>% 
   select(
     ConvoId = B2,
@@ -79,8 +86,12 @@ full_d_raw = full_d_raw %>%
     Role = B4, # (0 = persuader, 1 = persuadee)
     Dialogue = Unit
   )
+
+# looking at individual sentences/instances to look at how standard the data are
+fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 ```
 
+The text container `Dialogue` is comprised of full exchanges, where each exchange is a typed exchange between participants. This is a value anywhere from a symbol to a sentence to multiple sentences. 
 
 ```{r read2}
 # ann_d for the full dialog, with annotations
@@ -104,21 +115,11 @@ annset = ann_d_raw %>%
     Donation = B6,
     IntDonation = B5,
     NumTurn = B7,
-    # Label1 = # concat(er_label_1,ee_label_1),
-    # Label2 = # concat(er_label_2,ee_label_2),
     Neg = neg,
     Neu = neu,
     Pos = pos,
     everything()
   )
-
-# annset = ann_d %>% select()
-###
-
-```
-
-```{r exit}
-knitr::knit_exit()
 ```
 
 
@@ -135,6 +136,7 @@ fulltidy = fullset %>%
 # putting the words in un_nest
 fulltidy = full_d_raw %>% 
   inner_join(fullset) %>% 
+    # assigning labels to the levels
     mutate(
     religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), labels = c("Catholic","Protestant","Atheist","Other religion")), 
     sex = factor(sex, levels = c("Male","Female","Other"),labels = c("Male","Female","Other Genders")), 
@@ -142,20 +144,22 @@ fulltidy = full_d_raw %>%
     Role = factor(Role, levels = c("0","1"),labels = c("Persuader","Persuadee")), # adding labels!!
     edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), labels = c("Less than four-year college","College","Postgraduate"))
   ) %>% 
+
+  
   unnest_tokens(Word,Dialogue) %>% 
   # pulling out irrelevant words
   anti_join(get_stopwords(),by = c("Word" = "word")) 
 
 ```
 
+Here is where the tidying happens! So tidy text data is *one observation per row*, and in this text project, that means breaking up the text container `Dialogue` and having one word per row. I used `tidytext` to automatically parse the text into single rows.
+
+get_stopwords() was an important part of this process. It removes words that do not usually contain meaningful information so that the tens of thousands of random little words won't interfere with our analysis.
+
+
 ## Exploratory Data Analysis
 
-Using tidy data, we can explore text data and unsupervised learning to gain a better understanding of our dataset.
-For this project, we are using MIT's Persuasion for Good dataset </link here>
-
 ```{r fulltidy_plots01}
-# looking at individual sentences/instances to look at how standard the data are
-fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 # most popular words
 fulltidy %>% count(Word, sort = TRUE) %>% 
   filter(n > 1000) %>% 
@@ -165,7 +169,7 @@ fulltidy %>% count(Word, sort = TRUE) %>%
   coord_flip() +
   labs(x = NULL, title = "Most Common Words in Dialogue")
 ```
-Our data are held as full exchanges in a dialogue, where each exchange can comprise of typed exchanges between participants.
+
 Using 'tidy' data, we can see which words were used the most during the all the conversations, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
 
 ```{r fulltidy_plots03}
@@ -177,6 +181,7 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
   coord_flip() +
   labs(title = "Top Words by Role", x = NULL, fill = NULL)
 ```
+
 One of the major facets we examine is the role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
 
 ```{r fulltidy_plots04}
@@ -189,56 +194,57 @@ fulltidy %>%
   geom_col(aes(fill = n),show.legend = FALSE) +
 #  geom_text(aes(label = Word), check_overlap = TRUE, vjust = 1.5) +
   facet_wrap(~Role, scales = "free") +
-  labs(x = NULL, y = 'count',title = "Words by Role") +
+  labs(x = NULL, y = 'count',title = "Most Common Words by Role", subtitle = "Persuaders talked waaaay more often...about the same things as the persuadees") +
   coord_flip()
 ```
-This representation shows the most common words by Role. We'll come back 
 
-Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis. We'll go through
+This chart shows the most common words by Role. One would think, 'Ah this is it! We know what the most common words by Role are!' I thought the same thing. Alas, this is only the beginning. This chart is still important though! 
+
+Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis. Later, I'll explain some better ways to examine frequency.
+
 
 ### Donations Aside
+
 ```{r annset_plots, echo=FALSE}
 # plot multiple things against actual donation
 # plot of actual donation v stated donation
 # best way to represent the donation amount and the intended donation amount
 annset %>% 
-#  filter(IntDonation < 5000) %>% 
+  filter(IntDonation < 200,
+         Role == 1) %>% 
   ggplot() +
-  geom_boxplot(aes(IntDonation))
-annset %>%
-  filter(IntDonation < 75) %>% 
-  ggplot() +
-  geom_boxplot(aes(Donation-IntDonation))
-
-annset %>% 
-  ggplot(aes(IntDonation,Donation)) +
-  geom_jitter()
+  geom_boxplot(aes(IntDonation)) +
+  labs(title = "Show Me the Money", x = "stated donation amount (in USD)",subtitle = "Most people failed to get their partner to verbally commit to a donation amount")
 
 annset %>% 
   #difference between IntDonation and Donation
-  filter(IntDonation < 75) %>% 
+  filter(IntDonation < 75,
+         Role == 1) %>%
   ggplot(aes(Donation-IntDonation)) +
-  geom_histogram(binwidth = 10) 
-
-
-annset %>% 
-  #difference between IntDonation and Donation
-  filter(IntDonation < 75) %>% 
-  ggplot(aes(Donation-IntDonation)) +
-  geom_histogram(bins = 15) 
+  geom_histogram(bins = 15) +
+  labs(title = "But even out of those who did commit...",y = "# of participants", x = "difference in stated donation v actual donation amount (in USD)", subtitle = "Most either gave less or didn't actually give at all")
 
 ```
-Most people actually donated how much they pledged to donate. As expected, some donated less. There are two outliers with respect to x, one where someone promise to donate \$10,000 but didn't, and another where someone promised to donate \$500 and didn't. A kind soul donated more than they initially pledged. 
 
-### traits and values
-```{r fullset_plots, echo=FALSE}
+Most people actually donated how much they pledged to donate (which was nothing). As expected, some donated less, some donated more. Two big talkers promised to donate \$10,000 and \$500 respectively, but nothing came from it. Perhaps they weren't so persuasive after all...
+
+
+### Traits and Values
+
+```{r fullset_plot00, echo=FALSE}
 # distributions for each personality trait (one of those bar plots that is stacked/filled)
 
 # utterances per conversation
 fullset %>% 
   count(ConvoId) %>% 
   ggplot(aes(n)) +
-  geom_histogram()
+  geom_histogram(binwidth = 5) +
+  labs(title = 'How long is each conversation?',x = '# of turns',y = '# of conversations',subtitle = 'On average, their conversations are 20 exchanges long.')
+```
+
+
+
+```{r values_plot00, echo=FALSE}
 ##### values plots #####
 # the big five [extrovert, agreeable, conscientious, neurotic, open]
 full_i_raw %>% 
@@ -247,163 +253,61 @@ full_i_raw %>%
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
   geom_histogram(bins = 5, show.legend = FALSE) +
-  labs(title = 'the big five')
+  labs(title = 'The Big Five', y = '# of participants',subtitle = 'Participants\'s personalities tended to be highly agreeable, conscientious and open')
 ```
-Here we have our distributions of personality traits. This study collected data for three major personality scores: the big five, the schwartz and the moral foundations. The big five show us that our sample has very agreeable, extroverted, and concientious participants. They also skew towards open. 
 
-```{r moral_plot, echo=FALSE}
-# the moral foundations [care, fairness, loyalty, authority, purity, freedom]
-full_i_raw %>% 
-  select(B3,care:freedom) %>% 
-  pivot_longer(care:freedom,names_to = "trait", values_to = "score") %>% 
-  ggplot(aes(score, fill = trait)) +
-  facet_wrap(~trait) +
-  geom_histogram(bins = 6, show.legend = FALSE)
-```
-Here we see high levels of fairness and care, indicating a compassionate bunch.
-
-```{r schwartz_plot, echo=FALSE}
-# the Schwartz Portrait [conform, tradition, benevolence, universalism, self_direction, stimulation, hedonism, achievement, power, security]
-full_i_raw %>% 
-  select(B3,conform:security) %>% 
-  pivot_longer(conform:security,names_to = "trait", values_to = "score") %>% 
-  ggplot(aes(score, fill = trait)) +
-  facet_wrap(~trait) +
-  geom_histogram(bins = 6, show.legend = FALSE)
-```
-The Schwartz portrait shows benevolence, self-direction, and universalism
-
-```{r decision_plot, echo=FALSE}
-# the decision making style [rational, intuitive]
-full_i_raw %>% 
-  select(B3,rational:intuitive) %>% 
-  pivot_longer(rational:intuitive,names_to = "trait", values_to = "score") %>% 
-  ggplot(aes(score, fill = trait)) +
-  facet_wrap(~trait) +
-  geom_histogram(bins = 5, show.legend = FALSE)
-
- #####comments####
-# # 10 baby plots of value plots
-# full_i_raw %>% 
-#   select(B3,fairness:self_direction) %>% 
-#   pivot_longer(fairness:self_direction,names_to = "trait", values_to = "score") %>% 
-#   ggplot(aes(score, fill = trait)) +
-#   facet_wrap(~trait) +
-#   geom_histogram(bins = 6, show.legend = FALSE)
-
-# # 3 barcharts for education/ideology
-# full_i_raw %>% 
-#   count(edu,ideology) %>% 
-#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-#   # reoder education levels
-#   filter(!is.na(edu), !is.na(ideology)) %>% 
-#   ggplot(aes(ideology,n,fill = ideology)) +
-#   geom_col(show.legend = FALSE) +
-#   facet_wrap(~edu,scales = "free")
-```
 
 Other relevant metrics for traits: 
-```{r traits_plot0, echo=FALSE}
+
+```{r traits_plot00, echo=FALSE}
 ##### traits plots ####
 # one (or more) trait plots with other info
-# more exploratory plots age <dbl>, sex <chr>, race <chr>, edu <chr>, marital <chr>, employment <chr>, income <dbl>, religion <chr>, ideology <chr>
+# religion, sex, ideology, role, education
+# sex and role
+fullset %>%
+  count(sex,Role) %>% 
+  replace_na(list(sex = 'Other')) %>% 
+  mutate(Role = factor(Role, labels = c("Persuader","Persuadee"))) %>% 
+  ggplot(aes(sex,n, fill = Role)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~Role) +
+  labs(title = "Who's talking?", subtitle = "Role was split up evenly across gender identity",y = '# of participants',x = "gender")
 
-# age/sex
-full_i_raw %>%
-  filter(!is.na(sex)) %>% 
-  ggplot(aes(age)) +
-  geom_histogram(bins = 10) +
-  facet_wrap(~sex)
 ```
+
 
 
 ```{r traits_plot01, echo=FALSE}
-# income/employment
-full_i_raw %>%
-  filter(!is.na(employment),!is.na(income)) %>% 
-  ggplot(aes(income,fill = marital)) +
-  geom_histogram(binwidth = 1.5) +
-  facet_wrap(~employment) +
-  coord_flip()
-```
-
-
-```{r traits_plot02, echo=FALSE}
 # religion/ideology
 full_i_raw %>%
   count(religion,ideology) %>% 
   filter(!is.na(ideology),!is.na(religion)) %>% 
-  ggplot(aes(ideology,n)) +
-  geom_col() +
-  facet_wrap(~religion)
+  ggplot(aes(ideology,n,fill = religion)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~religion) +
+  labs(title = "Who's Talking?",x = "political ideology",y = "# of participants", subtitle = "Christians tend to be more conservative and Atheists tend more liberal")
 ```
 
 
-```{r traits_plot03, echo=FALSE}
-# # stacked barchart education/ideology
-# full_i_raw %>% 
-#   count(edu,ideology) %>% 
-#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-#   # reorder education levels
-#   filter(!is.na(edu), !is.na(ideology)) %>% 
-#   ggplot(aes(ideology,n,fill = edu)) +
-#   geom_col()
 
-# dodge barchart ideology/education
+```{r traits_plot02, echo=FALSE}
+# dodge barchart ideology/religion
 full_i_raw %>% 
   count(edu,ideology) %>% 
-  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
-  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
   # reoder education levels
   filter(!is.na(edu), !is.na(ideology)) %>% 
   ggplot(aes(ideology,n,fill = edu)) +
-  geom_col(position = "dodge")
-
-full_i_raw %>% 
-  count(edu,ideology) %>% 
-  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
-  mutate(edu = factor(edu,c("Less than four-year college","Four-year college","Postgraduate"))) %>%
-  # reoder education levels
-  filter(!is.na(edu), !is.na(ideology)) %>% 
-  ggplot(aes(ideology,n)) +
-  geom_col() +
-  facet_wrap(~edu)
-
-
-# # dodge barchart religion/ideology
-# full_i_raw %>% 
-#   count(religion,ideology) %>% 
-#   mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>% 
-#   # reoder education levels
-#   filter(!is.na(religion), !is.na(ideology)) %>% 
-#   ggplot(aes(religion,n,fill = ideology)) +
-#   geom_col(position = "dodge")
-
-# dodge barchart ideology/religion
-full_i_raw %>% 
-  count(religion,ideology) %>% 
-  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
-  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
-  # reoder education levels
-  filter(!is.na(religion), !is.na(ideology)) %>% 
-  ggplot(aes(ideology,n,fill = religion)) +
-  geom_col(position = "dodge")
-
-full_i_raw %>% 
-  count(religion,ideology) %>% 
-  # mutate(ideology = factor(ideology,c("Conservative","Moderate","Liberal"))) %>%
-  # mutate(religion = factor(religion,c("Catholic","Protestant","Atheist","Other religion"))) %>%
-  # reoder education levels
-  filter(!is.na(religion), !is.na(ideology)) %>% 
-  ggplot(aes(ideology,n,fill = religion)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~religion)
-
-
+  facet_wrap(~edu) +
+  labs(title = "Who's Talking?", x = 'political ideology', y = '# of participants', subtitle = "Most people have don't have a college degree, but similar political ideas")
 ```
 
 
-## Word Laws
+```{r exit}
+knitr::knit_exit()
+```
+
+## Laws are for the Words
 Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
 ```{r wordcount}
 ############## Group = ConvoId #########
