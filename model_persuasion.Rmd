@@ -60,10 +60,7 @@ full_i_raw = read_csv('data/FullData/full_info.csv',
 
 Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there.
 
-
-more words to describe interesting things or essential information (what's in here?) err on the side of text rather than comments
-
-```{r read3}
+```{r read2}
 ## import data
 fullset = full_d_raw %>% 
   left_join(full_i_raw) %>% 
@@ -93,7 +90,7 @@ fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 
 The text container `Dialogue` is comprised of full exchanges, where each exchange is a typed exchange between participants. This is a value anywhere from a symbol to a sentence to multiple sentences. 
 
-```{r read2}
+```{r read3}
 # ann_d for the full dialog, with annotations
 ann_d_raw = read_xlsx('data/AnnotatedData/300_dialog.xlsx',
          col_names = TRUE)
@@ -102,6 +99,7 @@ ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
          col_names = TRUE)
 ```
 
+Reading in the annotated data.....
 
 ```{r read4}
 annset = ann_d_raw %>% 
@@ -122,7 +120,7 @@ annset = ann_d_raw %>%
   )
 ```
 
-
+Joining the annotated data.....
 
 ```{r tidyer, include=FALSE, message=FALSE}
 # What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
@@ -145,16 +143,16 @@ fulltidy = full_d_raw %>%
     edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), labels = c("Less than four-year college","College","Postgraduate"))
   ) %>% 
 
-  
+  # tidying the Dialogue by word
   unnest_tokens(Word,Dialogue) %>% 
   # pulling out irrelevant words
   anti_join(get_stopwords(),by = c("Word" = "word")) 
 
 ```
 
-Here is where the tidying happens! So tidy text data is *one observation per row*, and in this text project, that means breaking up the text container `Dialogue` and having one word per row. I used `tidytext` to automatically parse the text into single rows.
+Here is where the tidying happens! So tidy text data is *one observation per row*, and in this text project, that means breaking up the text container `Dialogue` and having one word per row. I used `tidytext::unnest_tokens()` to automatically parse the text into single rows.
 
-get_stopwords() was an important part of this process. It removes words that do not usually contain meaningful information so that the tens of thousands of random little words won't interfere with our analysis.
+`stopwords::get_stopwords()` was an important part of this process. It removes words that do not usually contain meaningful information so that the tens of thousands of common little words won't interfere with our analysis.
 
 
 ## Exploratory Data Analysis
@@ -170,7 +168,19 @@ fulltidy %>% count(Word, sort = TRUE) %>%
   labs(x = NULL, title = "Most Common Words in Dialogue")
 ```
 
-Using 'tidy' data, we can see which words were used the most during the all the conversations, including a number of words such as 'can' and 'like', words that could be filtered our due to their lack of inherent meeting. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
+Using 'tidy' data, we can see which words were used the most during the all the conversations. Words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
+```{r fullset_plot00, echo=FALSE}
+# distributions for each personality trait (one of those bar plots that is stacked/filled)
+
+# utterances per conversation
+fullset %>% 
+  count(ConvoId) %>% 
+  ggplot(aes(n)) +
+  geom_histogram(binwidth = 5) +
+  labs(title = 'How long is each conversation?',x = '# of turns',y = '# of conversations',subtitle = 'On average, their conversations are 20 exchanges long.')
+```
+
+
 
 ```{r fulltidy_plots03}
 fulltidy %>% count(Word,Role, sort = TRUE) %>% 
@@ -182,7 +192,7 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
   labs(title = "Top Words by Role", x = NULL, fill = NULL)
 ```
 
-One of the major facets we examine is the role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
+One of the major facets we examine is the participant's role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
 
 ```{r fulltidy_plots04}
 ####Bar Charts (n) By Role####
@@ -205,7 +215,7 @@ Text analysis is based around frequency, how often the words occur. And there is
 
 ### Donations Aside
 
-```{r annset_plots, echo=FALSE}
+```{r annset_plot01, echo=FALSE}
 # plot multiple things against actual donation
 # plot of actual donation v stated donation
 # best way to represent the donation amount and the intended donation amount
@@ -228,21 +238,11 @@ annset %>%
 
 Most people actually donated how much they pledged to donate (which was nothing). As expected, some donated less, some donated more. Two big talkers promised to donate \$10,000 and \$500 respectively, but nothing came from it. Perhaps they weren't so persuasive after all...
 
+So who was doing the donating and persuading anyways?
 
 ### Traits and Values
 
-```{r fullset_plot00, echo=FALSE}
-# distributions for each personality trait (one of those bar plots that is stacked/filled)
-
-# utterances per conversation
-fullset %>% 
-  count(ConvoId) %>% 
-  ggplot(aes(n)) +
-  geom_histogram(binwidth = 5) +
-  labs(title = 'How long is each conversation?',x = '# of turns',y = '# of conversations',subtitle = 'On average, their conversations are 20 exchanges long.')
-```
-
-
+Let's get to know our participants! Here we have plots of their different values (the big five) and traits (education, sex, etc). These variables form the basis of our grouping variables later on, so it's a good idea to start here. This is also where I always start when playing with a dataset. While the dependent variable is always interesting, it's important to explore all the variables you have at the beginning.
 
 ```{r values_plot00, echo=FALSE}
 ##### values plots #####
@@ -256,8 +256,9 @@ full_i_raw %>%
   labs(title = 'The Big Five', y = '# of participants',subtitle = 'Participants\'s personalities tended to be highly agreeable, conscientious and open')
 ```
 
+Something cool about this dataset is that each participant took three personality tests before the discussion. The big five, a major psychometric personality test, is the one we focus on in this analysis, but a further analysis may evaluate the sample using the Schwartz portrait, moral foundation, and decision making model. The big five model here shows us the different sorts of people we have
 
-Other relevant metrics for traits: 
+Now we'll look at our sample and their different traits. I made plots of each variable, simply visualizing the sample to understand what the best characteristics would be to group by. Rather than examining the entire population as a group, I want to know what traits are related to which words. To figure our the best traits to examine however, we look at the relationship between the different variables.
 
 ```{r traits_plot00, echo=FALSE}
 ##### traits plots ####
@@ -272,15 +273,15 @@ fullset %>%
   geom_col(show.legend = FALSE) +
   facet_wrap(~Role) +
   labs(title = "Who's talking?", subtitle = "Role was split up evenly across gender identity",y = '# of participants',x = "gender")
-
 ```
 
-
+Role is arguably the most important grouping we have in this sample, because it tells us about the structure of the conversation. This grouping was the most obvious, because one could reasonably assume that the person being convinced and the person doing the convincing may speak differently. 
 
 ```{r traits_plot01, echo=FALSE}
 # religion/ideology
 full_i_raw %>%
   count(religion,ideology) %>% 
+  mutate(ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
   filter(!is.na(ideology),!is.na(religion)) %>% 
   ggplot(aes(ideology,n,fill = religion)) +
   geom_col(show.legend = FALSE) +
@@ -288,29 +289,38 @@ full_i_raw %>%
   labs(title = "Who's Talking?",x = "political ideology",y = "# of participants", subtitle = "Christians tend to be more conservative and Atheists tend more liberal")
 ```
 
-
+Higher proportions of atheists are liberal, as well as a large part of other religions. This tells us about the group makeups of ideology, where the conservative label will tend towards Christians and liberals will be mostly other religions and atheists.
 
 ```{r traits_plot02, echo=FALSE}
 # dodge barchart ideology/religion
 full_i_raw %>% 
   count(edu,ideology) %>% 
   # reoder education levels
+  mutate(edu = factor(edu, c("Less than four-year college","Four-year college","Postgraduate")),
+         ideology = factor(ideology, c("Conservative","Moderate","Liberal"))) %>% 
   filter(!is.na(edu), !is.na(ideology)) %>% 
-  ggplot(aes(ideology,n,fill = edu)) +
+  ggplot(aes(ideology,n,fill = ideology)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~edu) +
-  labs(title = "Who's Talking?", x = 'political ideology', y = '# of participants', subtitle = "Most people have don't have a college degree, but similar political ideas")
+  labs(title = "Who's Talking?", x = 'political ideology', y = '# of participants', subtitle = "Ideological distributions hold across each level of education")
 ```
 
+Most of our participants don't have a college degree, and for this sample, it seems education is not very related to political ideology. Here, we've learned a lot about our participants and their 
+
+There are a number of traits that are not visualized here: income level, race, marital status. These variables were also interesting, but each also had other issues that made them a bad fit for this analysis. 
+
+Back to the words!
 
 ```{r exit}
 knitr::knit_exit()
 ```
 
-## Laws are for the Words
-Words are fancy. And that kind of what Zipf's law says. It says that word frequency is inversely proportional to its rank. So what? 
+## Rank and Frequency
+
+Text cannot be added or subtracted. Text is analyzed by frequency, and there are a surprisingly large number of ways to analyze frequency. In this project, we look at an absolute relative document frequency and a Bayesian relative document frequency. But first, simple frequency!
+
 ```{r wordcount}
-############## Group = ConvoId #########
+## preparation for Zipf's law and tf-idf
 # two group by, one by conversation and one by total words in the sample
 words1 = fullset %>% 
   select(ConvoId,
@@ -326,8 +336,7 @@ words2 = words1 %>%
 
 wordcount <- left_join(words1, words2)
 
-############# Group = Corpus #######
-# group by total words in the sample
+# no grouping variable
 wordcount1 = fullset %>%
   select(ConvoId,
          Dialogue,
@@ -335,53 +344,31 @@ wordcount1 = fullset %>%
         ) %>%
   unnest_tokens(Word,Dialogue) %>%
   count(Word,sort = TRUE, name = "Count")
-
-# words22 = words11 %>%
-#   summarize(ctotal = sum(Count))
-# 
-# wordcount1 <- left_join(words11, words22)
-
-# these two datasets look extremely familiar... maybe bc they're both joined on ConvoId?
-
-# ####### Group = NumSet ######
-# # two group by, one by number of turns and one by total words in the sample
-# words111 = fullset %>% 
-#   select(ConvoId,
-#          Dialogue,
-#          NumTurn
-#         ) %>% 
-#   unnest_tokens(Word,Dialogue) %>% 
-#   count(NumTurn,Word,sort = TRUE, name = "Count")
-# 
-# words222 = words111 %>% 
-#   group_by(NumTurn) %>% 
-#   summarize(ctotal = sum(Count))
-# 
-# wordcount2 <- left_join(words111, words222)
-
 ```
 
-
 What do the distributions of the words look like compared to their conversation?
+
 ```{r word_frequency00}
-###########ConvoId#### 
 wordcount %>% 
   ggplot(aes(Count/ctotal)) +
   geom_histogram(bins = 15) +
-  labs(title = 'Word Usage per Conversation', x = "proportion", y = '# of words') 
+  labs(title = 'Word Usage per Conversation', x = "proportion of conversations", y = '# of words per conversation',subtitle = 'Many words are used infrequently and a few words are used very frequently') 
 ```
 
+This was where I felt like I started learning about my data. 
 
 ```{r word_frequency01}
-###########Corpus#####
 wordcount1 %>% 
   ggplot(aes(Count)) +
   geom_histogram(bins = 20) +
   scale_x_log10() +
-  labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words')
+  labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words',subtitle = 'Many words are said a few times, some words are said a lot')
 ```
 
-## Rank and Frequency
+
+
+## Zipf's Law
+
 ```{r frequency_rank}
 # by convo_id
 freq_by_rank <- wordcount %>%
@@ -393,16 +380,11 @@ freq_by_rank <- wordcount %>%
 freq_by_rank1 <- wordcount1 %>% 
   mutate(rank = row_number(),
          `term frequency` = Count)
-
-# freq_by_rank2 <- wordcount2 %>% 
-#   group_by(NumTurn) %>% 
-#   mutate(rank = row_number(), 
-#          `term frequency` = Count/ctotal)
-# summary(log10(freq_by_rank2[6]))
 ```
 
 
-```{r zipfslaw00}
+
+```{r zipfs_law00}
 # Zipf's law plot - group by ConvoId
 freq_by_rank %>%
   ggplot(aes(rank, `term frequency`, color = ConvoId)) +
@@ -413,7 +395,8 @@ freq_by_rank %>%
 ```
 
 
-```{r zipfslaw01}
+
+```{r zipfs_law01}
 # Zipf's law plot - corpus
 freq_by_rank1 %>% 
   ggplot(aes(rank, `term frequency`)) + 
@@ -424,67 +407,34 @@ freq_by_rank1 %>%
 ```
 
 
-```{r zipfslaw02}
-# # Zipf's law plot - group by NumTurn
-# freq_by_rank2 %>% 
-#   ggplot(aes(rank, `term frequency`, color = as.factor(NumTurn))) + 
-#   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
-#   scale_x_log10() +
-#   scale_y_log10()
-# # only seven groups rather than 1,000
 
-
-# # 
-# rank_subset = freq_by_rank %>% 
-#   filter(rank < 100, # what would be the middle range of this data?
-#          rank > 5)
-# 
-# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
-
+```{r zipfs_law02}
 rank_subset = freq_by_rank1 %>% 
   filter(rank > 100) # what would be the middle range of this data?
 
-rank_model1 = lm(log10(`term frequency`) ~ log10(rank), data = freq_by_rank1)
+rank_model01 = lm(log10(`term frequency`) ~ log10(rank), data = freq_by_rank1)
 
-rank_model11 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
-
-# rank_subset2 = freq_by_rank2 %>% 
-#   filter(rank < 1000,
-#          rank > 10)
-# 
-# lm(log10(`term frequency`) ~ log10(rank), data = rank_subset2)
+rank_model02 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
 ```
 
+
+
 ## Term Frequency - Inverse Document Frequency
+
 Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
 We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
+
 ```{r tf_idf}
 # there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
-# rank groupd by ConvoId
+# rank grouped by ConvoId
 ranktf = freq_by_rank %>% 
   # mutate(total = 352376) %>% 
   bind_tf_idf(Word,ConvoId,Count)
-# by utterance
-
-# rank grouped by corpus (not extremely efficient)
-# ranktf1 = freq_by_rank %>% 
-#   mutate(total = 352376) %>% 
-#   bind_tf_idf(Word,total,Count)
 
 # checking her out
 ranktf %>%
   select(-rank) %>%
   arrange(desc(tf_idf))
-# checking HER out
-# ranktf1 %>%
-#   select(-rank) %>%
-#   arrange(desc(tf_idf))
-
-# not working the way I want?
-# ranktf %>% 
-#   slice_max(tf_idf,n = 10) %>% 
-#   ggplot(aes(tf_idf,Word)) +
-#   geom_col()
 
 # grouped by role - top 10 words by role
 fulltidy %>% 
@@ -534,12 +484,15 @@ role_words %>%
   facet_wrap(~Role, scales = "free_y")
 
 ```
+
 tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
 Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which **words** stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
 The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
 
+
 ## Log-Odds
-```{r log_odds transform}
+
+```{r log_odds_transform}
 # log-odds by interest trait: religion, sex, ideology, role, education
 # log-odds grouped by religion
 religion_lo = fulltidy %>%
@@ -601,56 +554,63 @@ edu_lo = fulltidy %>%
   group_by(edu) %>%
   slice_max(log_odds_weighted, n = 10) ## most likely by education
 ```
+
 Log Odds is a Bayesian technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
 
-```{r log_odds relgion plot}
-##### plots #####
+```{r log_odds_relgion plot}
 religion_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~religion, scales = "free_y") +
   labs(y = NULL)
 ```
+
 Using log-odds to examine religion, we can learn a lot more about how people 
 
-```{r log_odds sex}
+```{r log_odds_sex}
 sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~sex, scales = "free") +
   labs(y = NULL)
 ```
+
 For sex, we can see that [observations]
 
-```{r log_odds ideology}
+```{r log_odds_ideology}
 ideology_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ideology, scales = "free_y") +
   labs(y = NULL)
 ```
+
 With respect to political ideology, [observations]
 
-```{r log_odds role}
+```{r log_odds_role}
 role_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~Role, scales = "free_y") +
   labs(y = NULL)
 ```
+
 [observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
 
-```{r log_odds edu}
+```{r log_odds_edu}
 edu_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~edu, scales = "free_y") +
   labs(y = NULL)
 ```
+
 Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate)
 
+
 ## Values Modelling
-```{r values_modelling}
+
+```{r values_modelling_agree}
 agree_freq <- fulltidy %>%
   filter(!is.na(agreeable)) %>%
   count(agreeable, Word) %>%
@@ -683,7 +643,9 @@ agree_slopes %>%
        y = "Word frequency")
 ```
 
-```{r conscience}
+
+
+```{r values_modelling_conscience}
 conscience_freq <- fulltidy %>%
   filter(!is.na(conscientious)) %>%
   count(conscientious, Word) %>%
@@ -717,7 +679,9 @@ conscience_slopes %>%
 
 ```
 
-```{r extrovert}
+
+
+```{r values_modelling_extrovert}
 extrovert_freq <- fulltidy %>%
   filter(!is.na(extrovert)) %>%
   count(extrovert, Word) %>%
@@ -750,7 +714,9 @@ extrovert_slopes %>%
        y = "Word frequency")
 ```
 
-```{r neurotic}
+
+
+```{r values_modelling_neurotic}
 neurotic_freq <- fulltidy %>%
   filter(!is.na(neurotic)) %>%
   count(neurotic, Word) %>%
@@ -783,7 +749,9 @@ neurotic_slopes %>%
        y = "Word frequency")
 ```
 
-```{r open}
+
+
+```{r values_modelling_open}
 open_freq <- fulltidy %>%
   filter(!is.na(open)) %>%
   count(open, Word) %>%
@@ -816,9 +784,13 @@ open_slopes %>%
        y = "Word frequency")
 ```
 
-## Topic Modelling
-```{r topic_model_1}
 
+## Topic Modelling
+
+Unsupervised learning. We used a bunch of traits to group our data before, but what if those groups were meaningless? Are there better or more homogeneous groups of text that we can use? The answer is yes, and machine leanring is going to help us find them.
+
+```{r topic_model01}
+## casting the text as a sparse matrix
 sparse_words <- fulltidy %>%
   mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
   count(Document, Word, sort = TRUE) %>%
@@ -826,6 +798,7 @@ sparse_words <- fulltidy %>%
 
 library(stm)
 
+## the model! the learning happens here
 convo_model <- stm(sparse_words, K = 40, init.type = "Spectral")
 summary(convo_model)
 
@@ -852,7 +825,8 @@ td_gamma %>%
 ```
 
 
-```{r topic_model_2}
+
+```{r topic_model02}
 plan(multiprocess)
 
 many_models <- data_frame(K = c(10,15,20,25,35,45,55,70,85,100)) %>%
@@ -886,6 +860,7 @@ k_result %>%
   labs(x = "K (number of topics)",
        y = NULL)
 ```
+
 LB: Convergence
 SC: Topic Quality
 K =? 60-70
