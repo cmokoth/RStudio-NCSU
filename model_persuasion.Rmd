@@ -2,12 +2,12 @@
 title: "modelling persuasion"
 author: "Christian Okoth"
 output:
+  word_document:
+    toc: yes
   html_document:
     theme: simplex
     toc: yes
     toc_float: yes
-  word_document:
-    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -19,7 +19,7 @@ library(ggplot2)
 set.seed(2020)
 library(ggthemes)
 # set theme
-theme_set(theme_solarized(light = FALSE))
+theme_set(theme_solarized())
 ```
 ## Introduction
 
