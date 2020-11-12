@@ -23,7 +23,8 @@ theme_set(theme_solarized())
 ```
 ## Introduction
 
-Introduction!
+The data for this project come from MIT's Persuasion for Good dataset </link here> [the name and hyperlink].
+I am loading a number of packages here, marked eack for the different sections they're used in. Some are essential [`r tidyverse`] while others are nice to have [`r skimr`] 
 
 ```{r library}
 # tidying
@@ -44,7 +45,7 @@ library(stm)
 
 ## Data Import & Tidying
 
-The data for this project come from MIT's Persuasion for Good dataset </link here> [the name and hyperlink]. I pulled the raw data from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information about each participant. The raw datasets the basics. here's where I got it/how I did it process 
+I pulled the raw data from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information about each participant. The raw datasets the basics. here's where I got it/how I did it process 
 see in text read in code
 
 ```{r read1}
@@ -122,7 +123,7 @@ annset = ann_d_raw %>%
 
 Joining the annotated data.....
 
-```{r tidyer, include=FALSE, message=FALSE}
+```{r tidyer, message=FALSE}
 # What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
 
 fulltidy = fullset %>% 
@@ -169,7 +170,7 @@ fulltidy %>% count(Word, sort = TRUE) %>%
 ```
 
 Using 'tidy' data, we can see which words were used the most during the all the conversations. Words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
-```{r fullset_plot00, echo=FALSE}
+```{r fulltidy_plot02}
 # distributions for each personality trait (one of those bar plots that is stacked/filled)
 
 # utterances per conversation
@@ -215,7 +216,7 @@ Text analysis is based around frequency, how often the words occur. And there is
 
 ### Donations Aside
 
-```{r annset_plot01, echo=FALSE}
+```{r donations}
 # plot multiple things against actual donation
 # plot of actual donation v stated donation
 # best way to represent the donation amount and the intended donation amount
@@ -244,7 +245,7 @@ So who was doing the donating and persuading anyways?
 
 Let's get to know our participants! Here we have plots of their different values (the big five) and traits (education, sex, etc). These variables form the basis of our grouping variables later on, so it's a good idea to start here. This is also where I always start when playing with a dataset. While the dependent variable is always interesting, it's important to explore all the variables you have at the beginning.
 
-```{r values_plot00, echo=FALSE}
+```{r values_plot00}
 ##### values plots #####
 # the big five [extrovert, agreeable, conscientious, neurotic, open]
 full_i_raw %>% 
@@ -260,7 +261,7 @@ Something cool about this dataset is that each participant took three personalit
 
 Now we'll look at our sample and their different traits. I made plots of each variable, simply visualizing the sample to understand what the best characteristics would be to group by. Rather than examining the entire population as a group, I want to know what traits are related to which words. To figure our the best traits to examine however, we look at the relationship between the different variables.
 
-```{r traits_plot00, echo=FALSE}
+```{r traits_plot00}
 ##### traits plots ####
 # one (or more) trait plots with other info
 # religion, sex, ideology, role, education
@@ -277,7 +278,7 @@ fullset %>%
 
 Role is arguably the most important grouping we have in this sample, because it tells us about the structure of the conversation. This grouping was the most obvious, because one could reasonably assume that the person being convinced and the person doing the convincing may speak differently. 
 
-```{r traits_plot01, echo=FALSE}
+```{r traits_plot01}
 # religion/ideology
 full_i_raw %>%
   count(religion,ideology) %>% 
@@ -291,7 +292,7 @@ full_i_raw %>%
 
 Higher proportions of atheists are liberal, as well as a large part of other religions. This tells us about the group makeups of ideology, where the conservative label will tend towards Christians and liberals will be mostly other religions and atheists.
 
-```{r traits_plot02, echo=FALSE}
+```{r traits_plot02}
 # dodge barchart ideology/religion
 full_i_raw %>% 
   count(edu,ideology) %>% 
@@ -307,7 +308,7 @@ full_i_raw %>%
 
 Most of our participants don't have a college degree, and for this sample, it seems education is not very related to political ideology. Here, we've learned a lot about our participants and their 
 
-There are a number of traits that are not visualized here: income level, race, marital status. These variables were also interesting, but each also had other issues that made them a bad fit for this analysis. 
+There are a number of traits that are not visualized here: income level, race, marital status. These variables were also interesting, but each also had other issues that made them a bad fit for this analysis. The variables we looked at here will be used as grouping variables throughout the rest of our analysis.
 
 Back to the words!
 
@@ -391,7 +392,6 @@ freq_by_rank %>%
   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
   scale_x_log10() +
   scale_y_log10()
-# extremely noisy! not improved by removing 'color = '
 ```
 
 
@@ -424,6 +424,7 @@ rank_model02 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
 Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
 We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
 
+To create a ranked set, we use `ConvoId` as a 
 ```{r tf_idf}
 # there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
 # rank grouped by ConvoId
@@ -829,7 +830,7 @@ td_gamma %>%
 ```{r topic_model02}
 plan(multiprocess)
 
-many_models <- data_frame(K = c(10,15,20,25,35,45,55,70,85,100)) %>%
+many_models <- data_frame(K = c(15,25,35,45,55,70,85,100)) %>%
   mutate(topic_model = future_map(K, ~stm(sparse_words, K = .,
                                           verbose = FALSE)))
 
@@ -864,3 +865,17 @@ k_result %>%
 LB: Convergence
 SC: Topic Quality
 K =? 60-70
+```{r semantic_convergence}
+k_result %>%
+  select(K, exclusivity, semantic_coherence) %>%
+  filter(K %in% c(15,45,70,100)) %>%
+  unnest(cols = c(exclusivity, semantic_coherence)) %>%
+  mutate(K = as.factor(K)) %>%
+  ggplot(aes(semantic_coherence, exclusivity, color = K,shape = K)) +
+  geom_point(size = 2, alpha = 0.7) +
+  labs(x = "Semantic coherence",
+       y = "Exclusivity",
+       title = "Comparing exclusivity and semantic coherence",
+       subtitle = "Models with fewer topics have higher semantic coherence for more topics, but lower exclusivity")
+```
+Here, exclusivity is the goal, but not at the loss of semantic coherence. The models in the top left are the most efficient, while the models on the bottom right are the least efficient. As we can see, it is much easier for a model to have high semantic coherence when K (the number of groups) is small than when it is large. That's because semantic coherence is a shorthand for how much it makes sense for the words to be together. 

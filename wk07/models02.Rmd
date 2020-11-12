@@ -80,5 +80,17 @@ k_result %>%
   labs(x = "K (number of topics)",
        y = NULL)
 ## between 60-70
+
+k_result %>%
+  select(K, exclusivity, semantic_coherence) %>%
+  filter(K %in% c(15,40,60,70,100)) %>%
+  unnest() %>%
+  mutate(K = as.factor(K)) %>%
+  ggplot(aes(semantic_coherence, exclusivity, color = K)) +
+  geom_point(size = 2, alpha = 0.7) +
+  labs(x = "Semantic coherence",
+       y = "Exclusivity",
+       title = "Comparing exclusivity and semantic coherence",
+       subtitle = "Models with fewer topics have higher semantic coherence for more topics, but lower exclusivity")
 ```
 
