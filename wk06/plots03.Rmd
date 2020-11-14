@@ -1,0 +1,37 @@
+---
+title: "Personality Values"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r values}
+##### values plots #####
+## making plots for values by trait! for both big five and moral foundations for interest traits: religion, sex, ideology, role, education
+# the big five [extrovert, agreeable, conscientious, neurotic, open]
+full_i_raw %>% 
+  select(B3,extrovert:open) %>% 
+  pivot_longer(extrovert:open,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 5, show.legend = FALSE) +
+  labs(title = 'the big five')
+
+# the moral foundations [care, fairness, loyalty, authority, purity, freedom]
+full_i_raw %>% 
+  select(B3,care:freedom) %>% 
+  pivot_longer(care:freedom,names_to = "trait", values_to = "score") %>% 
+  ggplot(aes(score, fill = trait)) +
+  facet_wrap(~trait) +
+  geom_histogram(bins = 6, show.legend = FALSE)
+
+```
+
+```{r traits}
+full_i_raw %>% 
+  # something to get what we need
+  select(B3,religion, sex, ideology, role, education)
+```
+

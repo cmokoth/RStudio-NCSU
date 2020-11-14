@@ -2,12 +2,12 @@
 title: "modelling persuasion"
 author: "Christian Okoth"
 output:
-  word_document:
-    toc: yes
   html_document:
     theme: simplex
     toc: yes
     toc_float: yes
+  word_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -23,8 +23,14 @@ theme_set(theme_solarized())
 ```
 ## Introduction
 
-The data for this project come from MIT's Persuasion for Good dataset </link here> [the name and hyperlink].
-I am loading a number of packages here, marked eack for the different sections they're used in. Some are essential [`r tidyverse`] while others are nice to have [`r skimr`] 
+This project is an exploration of text processing using methods from term frequency to unsupervised clustering. The data for this project come from MIT's Persuasion for Good dataset </link here> [the name and hyperlink].
+I am loading a number of packages here, marked each for the different sections they're used in. Some are essential [`tidyverse`] while others are nice to have [`skimr`]. Either way, I've split them into three distinct sections: tidying the text (we'll talk about what that means), analyzing text data, and unsupervised machine learning (clustering). 
+
+Text data are being generated constantly - reviews, surveys and questionnaires, text messages even! Reading every word and deriving meaning from it is very possible, a technique called coding. But what about when instead of five speakers there are 200? Or each person speaks for an hour instead of thirty minutes? How can we scale up our analysis of human text and speech using programming?
+
+how do people use words (and how do we look at them! method wise)
+Definitions!!!
+Document - 
 
 ```{r library}
 # tidying
@@ -43,73 +49,71 @@ library(future)
 library(stm)
 ```
 
+There are a few definitions we'll be using throughout. They will be defined as they come up, but if you just eed to see a masterlist, I've provided one here.
+
 ## Data Import & Tidying
 
-I pulled the raw data from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information about each participant. The raw datasets the basics. here's where I got it/how I did it process 
+The data are from the MIT gitlab page. I pulled the raw data directly from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information tables about each participant (respectively). The raw datasets the basics. here's where I got it/how I did it process 
 see in text read in code
 
 ```{r read1}
 # full_d for the full dialog, not annotated
 full_d_raw = read_csv('data/FullData/full_dialog.csv',
-         col_names = TRUE)
-
-full_i_raw = read_csv('data/FullData/full_info.csv',
          col_names = TRUE) %>% 
-  rename_with(~str_remove(.,"\\.x$"))
-# anonymous fn ? regular expression (python/perl/real programming)
-```
-
-Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there.
-
-```{r read2}
-## import data
-fullset = full_d_raw %>% 
-  left_join(full_i_raw) %>% 
-  select(
-    ConvoId = B2,
-    Turn = Turn,
-    Role = B4, # (0 = persuader, 1 = persuadee)
-    Dialogue = Unit,
-    User = B3,
-    NumTurn = B7,
-    Donation = B6,
-    everything()
-    )
-
-## simplifying reference to columns
-full_d_raw = full_d_raw %>% 
   select(
     ConvoId = B2,
     Turn = Turn,
     Role = B4, # (0 = persuader, 1 = persuadee)
     Dialogue = Unit
-  )
+    )
+
+full_i_raw = read_csv('data/FullData/full_info.csv',
+         col_names = TRUE) %>% 
+  rename_with(~str_remove(.,"\\.x$")) %>% 
+  select(
+    ConvoId = B2,
+    Role = B4, # (0 = persuader, 1 = persuadee)
+    User = B3,
+    NumTurn = B7,
+    Donation = B6,
+    everything()
+    )
+# anonymous fn ? regular expression (python/perl/real programming)
+```
+
+Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there. This dataset contains some important variables we need to understand. First, in `full_d_raw`, we have ConvoId, which is the unique identifier of each conversation held between two participants; There is Role, a boolean (0/1) value that indicates whether a participant is the persuader (0) or the persuadee (1). Role alternates every row, which contains the Dialogue, everything that someone said (typed) during their speaking turn. 
+In `full_i_raw`, we need to know about all of these variables, and we will look into them as they come up. What's important to know is that `full_i_raw` also has ConvoId and Role, two variables contained in the `full_d_raw` and `full_i_raw` dataset. These are our joining variables for the next step.
+
+```{r read2}
+# join on ConvoId, Dialogue
+fullset = full_d_raw %>% left_join(full_i_raw)
 
 # looking at individual sentences/instances to look at how standard the data are
 fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 ```
 
-The text container `Dialogue` is comprised of full exchanges, where each exchange is a typed exchange between participants. This is a value anywhere from a symbol to a sentence to multiple sentences. 
+Joining the two datasets together is an important step for simplifying the analysis to come! Peeking into the text container `Dialogue`, we see that it is comprised of full exchanges, anywhere from a symbol to a sentence to multiple sentences. There were four datasets in the Persuasion For Good data. These are the annotated datasets, aka the analysis that the original researcher did appended to the datasets we just examined. 
 
 ```{r read3}
 # ann_d for the full dialog, with annotations
 ann_d_raw = read_xlsx('data/AnnotatedData/300_dialog.xlsx',
-         col_names = TRUE)
-# ann_i for the corresponding index file
-ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
-         col_names = TRUE)
-```
-
-Reading in the annotated data.....
-
-```{r read4}
-annset = ann_d_raw %>% 
-  left_join(ann_i_raw) %>%
+         col_names = TRUE) %>%
   select(
     ConvoId = B2,
     Turn = Turn,
     Role = B4, # (0 means persuader, 1 means persuadee)
-    Sentence = Unit,
+    Dialogue = Unit,
+    everything()
+  )
+
+# ann_i for the corresponding index file
+ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
+         col_names = TRUE) %>%
+  select(
+    ConvoId = B2,
+    Turn = Turn,
+    Role = B4, # (0 means persuader, 1 means persuadee)
+    Dialogue = Unit,
     User = B3,
     Donation = B6,
     IntDonation = B5,
@@ -119,29 +123,36 @@ annset = ann_d_raw %>%
     Pos = pos,
     everything()
   )
+
+annset = ann_d_raw %>% left_join(ann_i_raw) 
 ```
 
-Joining the annotated data.....
+So what's new and influential in the annotated data? The most relevant addition to our data is IntDonation, the intended or stated donation that the participant verbally committed to during the conversation. We also join this data the same way we did to create `fullset`. 
+
+### Tidy Text
+
+Here is where the tidying happens! So tidy text data is **one observation per row**, and in this text project, that means breaking up the text container `Dialogue` into one word per row. I used `tidytext::unnest_tokens()` to automatically parse the text into single rows. This is a simple, fast way to parse the text.
 
 ```{r tidyer, message=FALSE}
-# What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row data. 
+# What can we do with tidyr? Here are some transformations from chapter 1 of Silge's Text Mining With R to make token per row or 'tidy' data. 
 
 fulltidy = fullset %>% 
-  select(ConvoId,
-         User,
-         Turn,
-         Role,
-         Dialogue) 
-# putting the words in un_nest
-fulltidy = full_d_raw %>% 
-  inner_join(fullset) %>% 
     # assigning labels to the levels
     mutate(
-    religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), labels = c("Catholic","Protestant","Atheist","Other religion")), 
-    sex = factor(sex, levels = c("Male","Female","Other"),labels = c("Male","Female","Other Genders")), 
-    ideology = factor(ideology, levels =  c("Conservative","Moderate","Liberal"), labels = c("Conservative","Moderate","Liberal"), ordered = FALSE), 
+    # levels of religion
+    religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), 
+                      labels = c("Catholic","Protestant","Atheist","Other religion")), 
+    # levels of sex
+    sex = factor(sex, levels = c("Male","Female","Other"),
+                 labels = c("Male","Female","Other Genders")), 
+    # levels of political ideology
+    ideology = factor(ideology, levels =  c("Conservative","Moderate","Liberal"), 
+                      labels = c("Conservative","Moderate","Liberal"), ordered = FALSE), 
+    # levels of Role
     Role = factor(Role, levels = c("0","1"),labels = c("Persuader","Persuadee")), # adding labels!!
-    edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), labels = c("Less than four-year college","College","Postgraduate"))
+    # levels of education
+    edu = factor(edu, levels = c("Less than four-year college","Four-year college","Postgraduate"), 
+                 labels = c("Less than four-year college","College","Postgraduate"))
   ) %>% 
 
   # tidying the Dialogue by word
@@ -151,12 +162,16 @@ fulltidy = full_d_raw %>%
 
 ```
 
-Here is where the tidying happens! So tidy text data is *one observation per row*, and in this text project, that means breaking up the text container `Dialogue` and having one word per row. I used `tidytext::unnest_tokens()` to automatically parse the text into single rows.
+`stopwords::get_stopwords()` is an important part of this process. It identifies words that do not usually contain meaningful information so that the tens of thousands of common little words won't interfere with our analysis. Nesting the function within `anti_join()` removes these observations from the dataset.
 
-`stopwords::get_stopwords()` was an important part of this process. It removes words that do not usually contain meaningful information so that the tens of thousands of common little words won't interfere with our analysis.
+As you can see, there is a significant `mutate()`, containing `factor()` functions. These functions are assigning labels to the different levels of variables we'll be examining. As you see, those variables are religion, sex, education, and political ideology. 
+
+So what does this all look like?
 
 
 ## Exploratory Data Analysis
+
+In this section, we will visualize all of the variables of interest, to determine what to expect further down the line. Let's start with our newly parsed words.
 
 ```{r fulltidy_plots01}
 # most popular words
@@ -169,10 +184,9 @@ fulltidy %>% count(Word, sort = TRUE) %>%
   labs(x = NULL, title = "Most Common Words in Dialogue")
 ```
 
-Using 'tidy' data, we can see which words were used the most during the all the conversations. Words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate.
-```{r fulltidy_plot02}
-# distributions for each personality trait (one of those bar plots that is stacked/filled)
+Using 'tidy' data, we can see which words were used the most during the all the conversations. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate. Still interesting! What about the conversations?
 
+```{r fulltidy_plot02}
 # utterances per conversation
 fullset %>% 
   count(ConvoId) %>% 
@@ -181,7 +195,7 @@ fullset %>%
   labs(title = 'How long is each conversation?',x = '# of turns',y = '# of conversations',subtitle = 'On average, their conversations are 20 exchanges long.')
 ```
 
-
+These conversations are about 20 exchanges long of average, but we can see that most of them were *at least* that long, with a few of them going up to 30! That's a while to talk to a stranger.
 
 ```{r fulltidy_plots03}
 fulltidy %>% count(Word,Role, sort = TRUE) %>% 
@@ -312,41 +326,36 @@ There are a number of traits that are not visualized here: income level, race, m
 
 Back to the words!
 
-```{r exit}
-knitr::knit_exit()
-```
 
 ## Rank and Frequency
 
 Text cannot be added or subtracted. Text is analyzed by frequency, and there are a surprisingly large number of ways to analyze frequency. In this project, we look at an absolute relative document frequency and a Bayesian relative document frequency. But first, simple frequency!
 
 ```{r wordcount}
-## preparation for Zipf's law and tf-idf
-# two group by, one by conversation and one by total words in the sample
+### preparation for Zipf's law and tf-idf
+# create two group by, one by conversation and one by total words in the sample
+# tidy the Dialogue to one obs per row, count by ConvoId
 words1 = fullset %>% 
   select(ConvoId,
-         Dialogue,
-         NumTurn
-        ) %>% 
+         Dialogue) %>% 
   unnest_tokens(Word,Dialogue) %>% 
   count(ConvoId,Word,sort = TRUE, name = "Count")
 
+# count the words per conversation
 words2 = words1 %>% 
   group_by(ConvoId) %>% 
   summarize(ctotal = sum(Count))
 
 wordcount <- left_join(words1, words2)
 
-# no grouping variable
+# tidy the Dialogue to one obs per row, count by total words in sample
 wordcount1 = fullset %>%
   select(ConvoId,
-         Dialogue,
-         NumTurn
-        ) %>%
+         Dialogue) %>%
   unnest_tokens(Word,Dialogue) %>%
   count(Word,sort = TRUE, name = "Count")
 ```
-
+To look at frequency, we have to look at examine how often something happens. To use the `count()` function, we have to examine how often something happens by category. In the first chunk, creating `words1`,`words2`, and `wordcount`, we grou by ConvoId, the unique identifier for each individual conversation held between two participants. 
 What do the distributions of the words look like compared to their conversation?
 
 ```{r word_frequency00}
@@ -366,9 +375,13 @@ wordcount1 %>%
   labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words',subtitle = 'Many words are said a few times, some words are said a lot')
 ```
 
-
+```{r exit}
+knitr::knit_exit()
+```
 
 ## Zipf's Law
+
+an equation! for zipfs law
 
 ```{r frequency_rank}
 # by convo_id
@@ -383,7 +396,7 @@ freq_by_rank1 <- wordcount1 %>%
          `term frequency` = Count)
 ```
 
-
+what is usual v unusual (interesting!)
 
 ```{r zipfs_law00}
 # Zipf's law plot - group by ConvoId
@@ -394,7 +407,7 @@ freq_by_rank %>%
   scale_y_log10()
 ```
 
-
+explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots
 
 ```{r zipfs_law01}
 # Zipf's law plot - corpus
@@ -408,23 +421,12 @@ freq_by_rank1 %>%
 
 
 
-```{r zipfs_law02}
-rank_subset = freq_by_rank1 %>% 
-  filter(rank > 100) # what would be the middle range of this data?
-
-rank_model01 = lm(log10(`term frequency`) ~ log10(rank), data = freq_by_rank1)
-
-rank_model02 = lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
-```
-
-
-
 ## Term Frequency - Inverse Document Frequency
 
 Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
 We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
 
-To create a ranked set, we use `ConvoId` as a 
+To create a ranked set, we use `ConvoId` as a grouping factor, or document.
 ```{r tf_idf}
 # there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
 # rank grouped by ConvoId
@@ -486,12 +488,17 @@ role_words %>%
 
 ```
 
-tf-idf, or *term frequency-inverse document frequency* in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
-Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which **words** stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
+tf-idf, or **term frequency-inverse document frequency** in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
+Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which *words* stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
 The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
 
 
 ## Log-Odds
+
+what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds]
+so why should we use it/why tf-idf didn't work
+how is it weighting/what is it for
+but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data
 
 ```{r log_odds_transform}
 # log-odds by interest trait: religion, sex, ideology, role, education
@@ -556,7 +563,7 @@ edu_lo = fulltidy %>%
   slice_max(log_odds_weighted, n = 10) ## most likely by education
 ```
 
-Log Odds is a Bayesian technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
+Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
 
 ```{r log_odds_relgion plot}
 religion_lo %>%
@@ -573,7 +580,7 @@ sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~sex, scales = "free") +
-  labs(y = NULL)
+  labs(y = NULL, x = "Log Odds Ratio",)
 ```
 
 For sex, we can see that [observations]
@@ -611,6 +618,7 @@ Most words have a fairly uniform frequency within the groups, but it appears the
 
 ## Values Modelling
 
+what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq
 ```{r values_modelling_agree}
 agree_freq <- fulltidy %>%
   filter(!is.na(agreeable)) %>%
@@ -788,7 +796,7 @@ open_slopes %>%
 
 ## Topic Modelling
 
-Unsupervised learning. We used a bunch of traits to group our data before, but what if those groups were meaningless? Are there better or more homogeneous groups of text that we can use? The answer is yes, and machine leanring is going to help us find them.
+Unsupervised learning. We used a bunch of traits to group our data before, but what if those groups were meaningless? Are there better or more homogeneous groups of text that we can use? The answer is yes, and machine learning is going to help us find them.
 
 ```{r topic_model01}
 ## casting the text as a sparse matrix
@@ -835,7 +843,7 @@ many_models <- data_frame(K = c(15,25,35,45,55,70,85,100)) %>%
                                           verbose = FALSE)))
 
 heldout <- make.heldout(sparse_words)
-
+# transforming the model into little 
 k_result <- many_models %>%
   mutate(exclusivity = map(topic_model, exclusivity),
          semantic_coherence = map(topic_model, semanticCoherence, sparse_words),
@@ -879,3 +887,15 @@ k_result %>%
        subtitle = "Models with fewer topics have higher semantic coherence for more topics, but lower exclusivity")
 ```
 Here, exclusivity is the goal, but not at the loss of semantic coherence. The models in the top left are the most efficient, while the models on the bottom right are the least efficient. As we can see, it is much easier for a model to have high semantic coherence when K (the number of groups) is small than when it is large. That's because semantic coherence is a shorthand for how much it makes sense for the words to be together. 
+
+```{r}
+topic_model_1 <- k_result %>% 
+  filter(K == 55) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+topic_model
+```
+
+## Summary
+goal, what to learn, what was done, how, expressions!
