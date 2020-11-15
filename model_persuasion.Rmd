@@ -19,7 +19,7 @@ library(ggplot2)
 set.seed(2020)
 library(ggthemes)
 # set theme
-theme_set(theme_solarized())
+theme_set(theme_gdocs())
 ```
 ## Introduction
 
@@ -27,10 +27,6 @@ This project is an exploration of text processing using methods from term freque
 I am loading a number of packages here, marked each for the different sections they're used in. Some are essential [`tidyverse`] while others are nice to have [`skimr`]. Either way, I've split them into three distinct sections: tidying the text (we'll talk about what that means), analyzing text data, and unsupervised machine learning (clustering). 
 
 Text data are being generated constantly - reviews, surveys and questionnaires, text messages even! Reading every word and deriving meaning from it is very possible, a technique called coding. But what about when instead of five speakers there are 200? Or each person speaks for an hour instead of thirty minutes? How can we scale up our analysis of human text and speech using programming?
-
-how do people use words (and how do we look at them! method wise)
-Definitions!!!
-Document - 
 
 ```{r library}
 # tidying
@@ -53,10 +49,9 @@ There are a few definitions we'll be using throughout. They will be defined as t
 
 ## Data Import & Tidying
 
-The data are from the MIT gitlab page. I pulled the raw data directly from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information tables about each participant (respectively). The raw datasets the basics. here's where I got it/how I did it process 
-see in text read in code
+The data are from the MIT gitlab page. I pulled the raw data directly from the repository, just `full_d_raw` and `full_i_raw`, which are the full dialogue and information tables about each participant (respectively). 
 
-```{r read1}
+```{r read00}
 # full_d for the full dialog, not annotated
 full_d_raw = read_csv('data/FullData/full_dialog.csv',
          col_names = TRUE) %>% 
@@ -82,9 +77,10 @@ full_i_raw = read_csv('data/FullData/full_info.csv',
 ```
 
 Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there. This dataset contains some important variables we need to understand. First, in `full_d_raw`, we have ConvoId, which is the unique identifier of each conversation held between two participants; There is Role, a boolean (0/1) value that indicates whether a participant is the persuader (0) or the persuadee (1). Role alternates every row, which contains the Dialogue, everything that someone said (typed) during their speaking turn. 
+
 In `full_i_raw`, we need to know about all of these variables, and we will look into them as they come up. What's important to know is that `full_i_raw` also has ConvoId and Role, two variables contained in the `full_d_raw` and `full_i_raw` dataset. These are our joining variables for the next step.
 
-```{r read2}
+```{r read01}
 # join on ConvoId, Dialogue
 fullset = full_d_raw %>% left_join(full_i_raw)
 
@@ -94,13 +90,12 @@ fullset %>% slice_sample(n = 5) %>% pull(Dialogue)
 
 Joining the two datasets together is an important step for simplifying the analysis to come! Peeking into the text container `Dialogue`, we see that it is comprised of full exchanges, anywhere from a symbol to a sentence to multiple sentences. There were four datasets in the Persuasion For Good data. These are the annotated datasets, aka the analysis that the original researcher did appended to the datasets we just examined. 
 
-```{r read3}
+```{r read02}
 # ann_d for the full dialog, with annotations
 ann_d_raw = read_xlsx('data/AnnotatedData/300_dialog.xlsx',
          col_names = TRUE) %>%
   select(
     ConvoId = B2,
-    Turn = Turn,
     Role = B4, # (0 means persuader, 1 means persuadee)
     Dialogue = Unit,
     everything()
@@ -111,16 +106,11 @@ ann_i_raw = read_xlsx('data/AnnotatedData/300_info.xlsx',
          col_names = TRUE) %>%
   select(
     ConvoId = B2,
-    Turn = Turn,
     Role = B4, # (0 means persuader, 1 means persuadee)
-    Dialogue = Unit,
     User = B3,
     Donation = B6,
     IntDonation = B5,
     NumTurn = B7,
-    Neg = neg,
-    Neu = neu,
-    Pos = pos,
     everything()
   )
 
@@ -128,6 +118,7 @@ annset = ann_d_raw %>% left_join(ann_i_raw)
 ```
 
 So what's new and influential in the annotated data? The most relevant addition to our data is IntDonation, the intended or stated donation that the participant verbally committed to during the conversation. We also join this data the same way we did to create `fullset`. 
+
 
 ### Tidy Text
 
@@ -186,7 +177,7 @@ fulltidy %>% count(Word, sort = TRUE) %>%
 
 Using 'tidy' data, we can see which words were used the most during the all the conversations. The words 'children','save',and 'donate' were used the most out of any words, most likely because the charity is called 'Save the Children' and the participants are tasked with convincing people to donate. Still interesting! What about the conversations?
 
-```{r fulltidy_plot02}
+```{r fulltidy_plots02}
 # utterances per conversation
 fullset %>% 
   count(ConvoId) %>% 
@@ -195,7 +186,7 @@ fullset %>%
   labs(title = 'How long is each conversation?',x = '# of turns',y = '# of conversations',subtitle = 'On average, their conversations are 20 exchanges long.')
 ```
 
-These conversations are about 20 exchanges long of average, but we can see that most of them were *at least* that long, with a few of them going up to 30! That's a while to talk to a stranger.
+These conversations are about 20 exchanges long of average, but we can see that most of them were *at least* that long, with a few of them going up to 30! That's a while to talk to a stranger. Who's saying what?
 
 ```{r fulltidy_plots03}
 fulltidy %>% count(Word,Role, sort = TRUE) %>% 
@@ -204,10 +195,10 @@ fulltidy %>% count(Word,Role, sort = TRUE) %>%
   ggplot(aes(Word,n, fill = as.factor(Role))) +
   geom_col() +
   coord_flip() +
-  labs(title = "Top Words by Role", x = NULL, fill = NULL)
+  labs(title = "Top Words by Role", x = NULL, fill = NULL,subtitle = "Only the persuaders said payment (and most everything else too)")
 ```
 
-One of the major facets we examine is the participant's role in the conversation. Each person is assigned a role, the person asking for a donation and the person being asked to donate.
+Out of the top words that *anyone* said, persuaders said every word, and they said every word a lot. The only word that persuadees said more than persuaders is 'yes'. One of the major facets we examine is the participant's role in the conversation as it seems to have an impact on what words each participant uses. 
 
 ```{r fulltidy_plots04}
 ####Bar Charts (n) By Role####
@@ -223,26 +214,31 @@ fulltidy %>%
   coord_flip()
 ```
 
-This chart shows the most common words by Role. One would think, 'Ah this is it! We know what the most common words by Role are!' I thought the same thing. Alas, this is only the beginning. This chart is still important though! 
+Role also seems to have an impact of how *much* each participant says. Clearly, the persuaders are driving the conversation. This chart shows the most common words by Role. One would think, 'Ah this is it! We know what the most common words by Role are!' Well, not exactly. Alas, this is only the beginning of text analysis. This chart is still important though! 
 
-Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from the different methods of exploring frequency we go over in this analysis. Later, I'll explain some better ways to examine frequency.
+Text analysis is based around frequency, how often the words occur. And there is something meaningful to learn from each of the different methods of exploring frequency we go over in this analysis. Later, I'll explain some better ways to examine frequency.
 
 
 ### Donations Aside
 
-```{r donations}
-# plot multiple things against actual donation
-# plot of actual donation v stated donation
-# best way to represent the donation amount and the intended donation amount
+So how well did participants do at persuading people?
+
+```{r donations00}
+# plot intended donations
 annset %>% 
   filter(IntDonation < 200,
          Role == 1) %>% 
   ggplot() +
   geom_boxplot(aes(IntDonation)) +
   labs(title = "Show Me the Money", x = "stated donation amount (in USD)",subtitle = "Most people failed to get their partner to verbally commit to a donation amount")
+```
 
+Not a lot of people planned to donate! Our persuaders may not have been very persuasive. There were a few outliers not represented on this graph, but first let's see how the money acually turned out.
+
+```{r donations01}
+# difference of intended donation and donation by frequency
 annset %>% 
-  #difference between IntDonation and Donation
+  # difference between IntDonation and Donation
   filter(IntDonation < 75,
          Role == 1) %>%
   ggplot(aes(Donation-IntDonation)) +
@@ -255,15 +251,15 @@ Most people actually donated how much they pledged to donate (which was nothing)
 
 So who was doing the donating and persuading anyways?
 
+
 ### Traits and Values
 
 Let's get to know our participants! Here we have plots of their different values (the big five) and traits (education, sex, etc). These variables form the basis of our grouping variables later on, so it's a good idea to start here. This is also where I always start when playing with a dataset. While the dependent variable is always interesting, it's important to explore all the variables you have at the beginning.
 
 ```{r values_plot00}
-##### values plots #####
 # the big five [extrovert, agreeable, conscientious, neurotic, open]
 full_i_raw %>% 
-  select(B3,extrovert:open) %>% 
+  select(User,extrovert:open) %>% 
   pivot_longer(extrovert:open,names_to = "trait", values_to = "score") %>% 
   ggplot(aes(score, fill = trait)) +
   facet_wrap(~trait) +
@@ -271,14 +267,12 @@ full_i_raw %>%
   labs(title = 'The Big Five', y = '# of participants',subtitle = 'Participants\'s personalities tended to be highly agreeable, conscientious and open')
 ```
 
-Something cool about this dataset is that each participant took three personality tests before the discussion. The big five, a major psychometric personality test, is the one we focus on in this analysis, but a further analysis may evaluate the sample using the Schwartz portrait, moral foundation, and decision making model. The big five model here shows us the different sorts of people we have
+Something cool about this dataset is that each participant took three personality tests before the discussion. The big five, a major psychometric personality test, is the one we focus on in this analysis, but a further analysis may evaluate the sample using the Schwartz portrait, moral foundations, and decision making model. The big five model here shows us the different sorts of people we have and their values.
 
-Now we'll look at our sample and their different traits. I made plots of each variable, simply visualizing the sample to understand what the best characteristics would be to group by. Rather than examining the entire population as a group, I want to know what traits are related to which words. To figure our the best traits to examine however, we look at the relationship between the different variables.
+Now we'll look at our sample and their different traits. I made plots of each variable, simply visualizing the sample to understand what the best characteristics would be to group by. Rather than examining the entire population as a group, we can breakout traits to see if they are related to which words participants used. To figure our the best traits to examine however, we look at distributions and the relationships between the different variables.
 
 ```{r traits_plot00}
-##### traits plots ####
-# one (or more) trait plots with other info
-# religion, sex, ideology, role, education
+# one (or more) trait plots with religion, sex, ideology, role, education
 # sex and role
 fullset %>%
   count(sex,Role) %>% 
@@ -290,7 +284,7 @@ fullset %>%
   labs(title = "Who's talking?", subtitle = "Role was split up evenly across gender identity",y = '# of participants',x = "gender")
 ```
 
-Role is arguably the most important grouping we have in this sample, because it tells us about the structure of the conversation. This grouping was the most obvious, because one could reasonably assume that the person being convinced and the person doing the convincing may speak differently. 
+Role is arguably the most important grouping we have in this sample, because it tells us about the structure of the conversation. This grouping was the most obvious to analyze, because one could reasonably assume that the person being convinced and the person doing the convincing may speak differently. The gender of the participant seems to be evenly split up across male and female, and there are too few other genders participating to examine. What about ideology? Religion?
 
 ```{r traits_plot01}
 # religion/ideology
@@ -304,7 +298,7 @@ full_i_raw %>%
   labs(title = "Who's Talking?",x = "political ideology",y = "# of participants", subtitle = "Christians tend to be more conservative and Atheists tend more liberal")
 ```
 
-Higher proportions of atheists are liberal, as well as a large part of other religions. This tells us about the group makeups of ideology, where the conservative label will tend towards Christians and liberals will be mostly other religions and atheists.
+Higher proportions of atheists are liberal, as well as a large part of other religions. This tells us about the group makeups of political ideology, where the conservative label will tend to have more Christians and liberals will be mostly other religions and atheists. What about education?
 
 ```{r traits_plot02}
 # dodge barchart ideology/religion
@@ -320,7 +314,7 @@ full_i_raw %>%
   labs(title = "Who's Talking?", x = 'political ideology', y = '# of participants', subtitle = "Ideological distributions hold across each level of education")
 ```
 
-Most of our participants don't have a college degree, and for this sample, it seems education is not very related to political ideology. Here, we've learned a lot about our participants and their 
+Most of our participants don't have a college degree, and for this sample, it seems education is not very related to political ideology. There are pretty similar distributions of political ideology for each education level. Either way, our sample has more liberals than conservatives and moderates. 
 
 There are a number of traits that are not visualized here: income level, race, marital status. These variables were also interesting, but each also had other issues that made them a bad fit for this analysis. The variables we looked at here will be used as grouping variables throughout the rest of our analysis.
 
@@ -331,7 +325,7 @@ Back to the words!
 
 Text cannot be added or subtracted. Text is analyzed by frequency, and there are a surprisingly large number of ways to analyze frequency. In this project, we look at an absolute relative document frequency and a Bayesian relative document frequency. But first, simple frequency!
 
-```{r wordcount}
+```{r wordcount00}
 ### preparation for Zipf's law and tf-idf
 # create two group by, one by conversation and one by total words in the sample
 # tidy the Dialogue to one obs per row, count by ConvoId
@@ -347,7 +341,11 @@ words2 = words1 %>%
   summarize(ctotal = sum(Count))
 
 wordcount <- left_join(words1, words2)
+```
 
+To look at frequency, we have to look at examine how often something happens. To use the `count()` function, we have to examine how often something happens by category. In the first chunk creating `words1`,`words2`, and `wordcount`, we group by ConvoId, the unique identifier for each individual conversation held between two participants. 
+
+```{r wordcount}
 # tidy the Dialogue to one obs per row, count by total words in sample
 wordcount1 = fullset %>%
   select(ConvoId,
@@ -355,25 +353,29 @@ wordcount1 = fullset %>%
   unnest_tokens(Word,Dialogue) %>%
   count(Word,sort = TRUE, name = "Count")
 ```
-To look at frequency, we have to look at examine how often something happens. To use the `count()` function, we have to examine how often something happens by category. In the first chunk, creating `words1`,`words2`, and `wordcount`, we grou by ConvoId, the unique identifier for each individual conversation held between two participants. 
+
+And we have one grouped by word itself (Hint: this is just word frequency).
+
 What do the distributions of the words look like compared to their conversation?
 
 ```{r word_frequency00}
 wordcount %>% 
-  ggplot(aes(Count/ctotal)) +
-  geom_histogram(bins = 15) +
-  labs(title = 'Word Usage per Conversation', x = "proportion of conversations", y = '# of words per conversation',subtitle = 'Many words are used infrequently and a few words are used very frequently') 
+  ggplot(aes(Count/ctotal, fill = 16)) +
+  geom_histogram(bins = 15, show.legend = FALSE) +
+  labs(title = 'Word Frequency per Conversation', x = "proportion of word usage", y = '# of conversations',subtitle = 'Many words are used infrequently and a few words are used very frequently') 
 ```
 
-This was where I felt like I started learning about my data. 
+This was where I felt like I started learning about my data. There are a lot of words used very few times in many conversations.
 
 ```{r word_frequency01}
 wordcount1 %>% 
-  ggplot(aes(Count)) +
-  geom_histogram(bins = 20) +
+  ggplot(aes(Count, fill = 13)) +
+  geom_histogram(bins = 20, show.legend = FALSE) +
   scale_x_log10() +
   labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words',subtitle = 'Many words are said a few times, some words are said a lot')
 ```
+
+So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this even more.
 
 ```{r exit}
 knitr::knit_exit()
@@ -382,21 +384,22 @@ knitr::knit_exit()
 ## Zipf's Law
 
 an equation! for zipfs law
+Zipf's law is based on rank, so here we build that into our dataset `freq_by_rank`. The **rank** is how many times each word appears relative to other words in the sample. This is an abbreviated way of exploring how many times each word appears. 
 
 ```{r frequency_rank}
 # by convo_id
-freq_by_rank <- wordcount %>%
+freq_by_rank = wordcount %>%
   group_by(ConvoId) %>%
   mutate(rank = row_number(),
          `term frequency` = Count/ctotal)
 
 # corpus, no by variable
-freq_by_rank1 <- wordcount1 %>% 
+freq_by_rank1 = wordcount1 %>% 
   mutate(rank = row_number(),
          `term frequency` = Count)
 ```
 
-what is usual v unusual (interesting!)
+Similarly to word frequency, we create a rank for each word based on how often it's used in each group (ConvoId) or in the entire set. Creating a rank is rather simple as `count()` organizes the data based on frequency automatically. 
 
 ```{r zipfs_law00}
 # Zipf's law plot - group by ConvoId
@@ -404,10 +407,12 @@ freq_by_rank %>%
   ggplot(aes(rank, `term frequency`, color = ConvoId)) +
   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
   scale_x_log10() +
-  scale_y_log10()
+  scale_y_log10() +
+  labs(title = 'Zipf\'s law in action',subtitle = 'There are over 1,000 distinct conversations visualized here')
 ```
 
-explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots
+This graph creates a line for each conversation. It is mostly unreadable, but shows that all of the conversations show this inverse relationship that Zipf demonstrates. Here is the reasonable interpretation.
+explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots.
 
 ```{r zipfs_law01}
 # Zipf's law plot - corpus
@@ -415,10 +420,12 @@ freq_by_rank1 %>%
   ggplot(aes(rank, `term frequency`)) + 
   geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
   scale_x_log10() +
-  scale_y_log10()
+  scale_y_log10() +
+  labs(title = 'Zipf\'s law in action', subtitle = 'Zipf\'s law says there is an inverse term frequency-rank relationship')
 # very straight
 ```
 
+This plot of the entire data is nearly perfect. With a scaled x and y axis, we can see a nearly linear relationship appear in the data. We're going to take this idea a little further with tf-idf.
 
 
 ## Term Frequency - Inverse Document Frequency
@@ -427,7 +434,8 @@ Term frequency - inverse document frequency is a statistic intended to measure t
 We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
 
 To create a ranked set, we use `ConvoId` as a grouping factor, or document.
-```{r tf_idf}
+
+```{r tf_idf00}
 # there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
 # rank grouped by ConvoId
 ranktf = freq_by_rank %>% 
@@ -437,8 +445,12 @@ ranktf = freq_by_rank %>%
 # checking her out
 ranktf %>%
   select(-rank) %>%
-  arrange(desc(tf_idf))
 
+arrange(desc(tf_idf))
+```
+
+
+```{r tf_idf01}
 # grouped by role - top 10 words by role
 fulltidy %>% 
   count(Role,Word, sort = TRUE) %>% 
@@ -446,7 +458,10 @@ fulltidy %>%
   arrange(-tf_idf) %>% 
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
+```
 
+
+```{r tf_idf02}
 fulltidy %>% 
   # mutate(Utterance = row_number()) %>% 
   unite('ConvoId', ConvoId,Role,sep = '--',remove = FALSE) %>% 
@@ -457,8 +472,10 @@ fulltidy %>%
   filter(n > 10) %>% 
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
+```
 
 
+```{r tf_idf03}
 convo_tf_idf = fulltidy %>% 
   # mutate(Utterance = row_number()) %>% 
   unite('ConvoID', ConvoId,Role,sep = '--',remove = FALSE) %>% 
@@ -469,7 +486,10 @@ convo_tf_idf = fulltidy %>%
   separate(ConvoID,into = c('ConvoId','Role'),sep = '--') %>% 
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
+```
 
+
+```{r tf_idf04}
 role_words = convo_tf_idf %>% 
   group_by(Word) %>% 
   filter(sum(n) > 10) %>% # only keep words used over 50 times total
@@ -480,15 +500,18 @@ role_words = convo_tf_idf %>%
   summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
   group_by(Role) %>% 
   slice_max(tf_idf,n = 15)
+```
 
+
+```{r tf_idf05}
 role_words %>% 
   ggplot(aes(tf_idf,Word)) +
   geom_col() +
   facet_wrap(~Role, scales = "free_y")
-
 ```
 
 tf-idf, or **term frequency-inverse document frequency** in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
+
 Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which *words* stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
 The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
 
@@ -500,7 +523,33 @@ so why should we use it/why tf-idf didn't work
 how is it weighting/what is it for
 but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data
 
-```{r log_odds_transform}
+```{r log_odds_role00}
+# log-odds grouped by role
+role_lo = fulltidy %>%
+  filter(!is.na(Role)) %>%
+  count(Word, Role, sort = TRUE) %>%
+  bind_log_odds(Role, Word, n) %>%
+  arrange(-log_odds_weighted) %>%
+  group_by(Word) %>%     ## only keep words used over 50 times total
+  filter(sum(n) > 10) %>% # how robust is log-odds
+  ungroup %>%
+  group_by(Role) %>%
+  slice_max(log_odds_weighted, n = 10)    ## most likely by role
+```
+
+Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
+
+```{r log_odds_role01}
+role_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~Role, scales = "free_y") +
+  labs(y = NULL)
+```
+
+[observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
+
+```{r log_odds_relgion}
 # log-odds by interest trait: religion, sex, ideology, role, education
 # log-odds grouped by religion
 religion_lo = fulltidy %>%
@@ -514,6 +563,16 @@ religion_lo = fulltidy %>%
   group_by(religion) %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by religion
 
+religion_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~religion, scales = "free_y") +
+  labs(y = NULL)
+```
+
+Using log-odds to examine religion, we can learn a lot more about how people 
+
+```{r log_odds_sex}
 # log-odds grouped by sex
 sex_lo = fulltidy %>%
   filter(!is.na(sex)) %>%
@@ -526,6 +585,16 @@ sex_lo = fulltidy %>%
   group_by(sex) %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by sex
 
+sex_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sex, scales = "free") +
+  labs(y = NULL, x = "Log Odds Ratio",)
+```
+
+For sex, we can see that [observations]
+
+```{r log_odds_ideology}
 # log-odds grouped by ideology
 ideology_lo = fulltidy %>%
   filter(!is.na(ideology)) %>%
@@ -538,18 +607,16 @@ ideology_lo = fulltidy %>%
   group_by(ideology) %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by ideology
 
-# log-odds grouped by role
-role_lo = fulltidy %>%
-  filter(!is.na(Role)) %>%
-  count(Word, Role, sort = TRUE) %>%
-  bind_log_odds(Role, Word, n) %>%
-  arrange(-log_odds_weighted) %>%
-  group_by(Word) %>%     ## only keep words used over 50 times total
-  filter(sum(n) > 10) %>% # how robust is log-odds
-  ungroup %>%
-  group_by(Role) %>%
-  slice_max(log_odds_weighted, n = 10)    ## most likely by role
+ideology_lo %>%
+  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ideology, scales = "free_y") +
+  labs(y = NULL)
+```
 
+With respect to political ideology, [observations]
+
+```{r log_odds_edu}
 # log-odds grouped by role
 edu_lo = fulltidy %>%
   filter(!is.na(edu)) %>%
@@ -561,51 +628,7 @@ edu_lo = fulltidy %>%
   ungroup %>%
   group_by(edu) %>%
   slice_max(log_odds_weighted, n = 10) ## most likely by education
-```
 
-Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
-
-```{r log_odds_relgion plot}
-religion_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~religion, scales = "free_y") +
-  labs(y = NULL)
-```
-
-Using log-odds to examine religion, we can learn a lot more about how people 
-
-```{r log_odds_sex}
-sex_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~sex, scales = "free") +
-  labs(y = NULL, x = "Log Odds Ratio",)
-```
-
-For sex, we can see that [observations]
-
-```{r log_odds_ideology}
-ideology_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ideology, scales = "free_y") +
-  labs(y = NULL)
-```
-
-With respect to political ideology, [observations]
-
-```{r log_odds_role}
-role_lo %>%
-  ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~Role, scales = "free_y") +
-  labs(y = NULL)
-```
-
-[observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
-
-```{r log_odds_edu}
 edu_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
   geom_col(show.legend = FALSE) +
