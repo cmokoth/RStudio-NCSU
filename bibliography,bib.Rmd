@@ -1,0 +1,12 @@
+---
+output: html_document
+bibliography: references.bib  
+---
+
+@article{wang2019persuasion,
+ title={Persuasion for Good: Towards a Personalized Persuasive Dialogue System for Social Good},
+ author={Wang, Xuewei and Shi, Weiyan and Kim, Richard and Oh, Yoojung and Yang, Sijia and Zhang, Jingwen and Yu, Zhou},
+ journal={arXiv preprint arXiv:1906.06725},
+ year={2019}
+}
+
