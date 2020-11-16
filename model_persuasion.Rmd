@@ -375,22 +375,23 @@ wordcount1 %>%
   labs(title = 'Word Frequency', x = '# of occurences per word', y = '# of words',subtitle = 'Many words are said a few times, some words are said a lot')
 ```
 
-So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this even more.
+So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this phenomenon even more using Zipf's law.
 
-```{r exit}
-knitr::knit_exit()
-```
 
 ## Zipf's Law
 
-an equation! for zipfs law
-Zipf's law is based on rank, so here we build that into our dataset `freq_by_rank`. The **rank** is how many times each word appears relative to other words in the sample. This is an abbreviated way of exploring how many times each word appears. 
+The phenomenon we just saw, the inverse relationship between word frequency and rank, has a name: Zipf's Law. Zipf's law is the observation that word frequency has an inverse relationship to rank.
+$$
+\text{frequency} \propto \frac{1}{\text{rank}}
+$$
+
+Zipf's law is based on rank, so here we build that into our dataset `freq_by_rank`. The $rank$ is how many times each word appears relative to other words in the sample. This is an abbreviated way of exploring how many times each word appears.
 
 ```{r frequency_rank}
 # by convo_id
 freq_by_rank = wordcount %>%
   group_by(ConvoId) %>%
-  mutate(rank = row_number(),
+  mutate(rank = row_number(), ## this works because the data are sorted already
          `term frequency` = Count/ctotal)
 
 # corpus, no by variable
@@ -399,7 +400,9 @@ freq_by_rank1 = wordcount1 %>%
          `term frequency` = Count)
 ```
 
-Similarly to word frequency, we create a rank for each word based on how often it's used in each group (ConvoId) or in the entire set. Creating a rank is rather simple as `count()` organizes the data based on frequency automatically. 
+Similarly to word frequency, we create a rank for each word based on how often it's used in each group (ConvoId) or in the entire set. Creating a rank is rather simple as `count(sort = TRUE)` organizes the data based on frequency automatically. We also create a second `freq_by_rank1` to measure rank of words across the entire dataset, not just within `ConvoId` groups.
+
+So what can we make with this?
 
 ```{r zipfs_law00}
 # Zipf's law plot - group by ConvoId
@@ -411,8 +414,7 @@ freq_by_rank %>%
   labs(title = 'Zipf\'s law in action',subtitle = 'There are over 1,000 distinct conversations visualized here')
 ```
 
-This graph creates a line for each conversation. It is mostly unreadable, but shows that all of the conversations show this inverse relationship that Zipf demonstrates. Here is the reasonable interpretation.
-explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots.
+This graph creates a line for each conversation. It is mostly unreadable [there are 1017 distinct conversations], but shows that all of the conversations demonstrate this inverse relationship that Zipf demonstrates. Here is the reasonable interpretation.
 
 ```{r zipfs_law01}
 # Zipf's law plot - corpus
@@ -425,7 +427,9 @@ freq_by_rank1 %>%
 # very straight
 ```
 
-This plot of the entire data is nearly perfect. With a scaled x and y axis, we can see a nearly linear relationship appear in the data. We're going to take this idea a little further with tf-idf.
+This plot of the entire data is nearly perfect. With a scaled x and y axis, we can see a nearly linear relationship appear in the data. There is a bit of bowing at the tails. Out data has fewer low ranking words than expected and fewer words with high rank than expected. We're going to take this idea a little further with tf-idf.
+
+explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots.
 
 
 ## Term Frequency - Inverse Document Frequency
@@ -436,19 +440,19 @@ We can apply this method to investigate deeper into the data. We have already lo
 To create a ranked set, we use `ConvoId` as a grouping factor, or document.
 
 ```{r tf_idf00}
-# there doesn't seem to be a way to evaluate tf_idf with this function without a grouping variable
 # rank grouped by ConvoId
 ranktf = freq_by_rank %>% 
-  # mutate(total = 352376) %>% 
   bind_tf_idf(Word,ConvoId,Count)
 
 # checking her out
 ranktf %>%
   select(-rank) %>%
 
+# maximize tf_idf
 arrange(desc(tf_idf))
 ```
 
+Let's talk about `bind_tf_idf()`. It takes the arguments term, document, n and creates three variables: tf, idf, and tf_idf. tf - Term Frequency is a measure of how frequently the word appears in the document. How common is a word within a given conversation? idf - Inverse Document Frequency measure how $infrequently$ a word appears in the entire boby of text [all documents]. tf-idf - Term Frequency - Inverse Document Frequency is them the product of those two measures, and it able to account for the frequency of a word within a conversation compared to the frequency of a word across all conversations.  
 
 ```{r tf_idf01}
 # grouped by role - top 10 words by role
@@ -460,6 +464,7 @@ fulltidy %>%
   slice_max(tf_idf, n = 10)
 ```
 
+The persuader has the largest tf-idf values for 2018, reportedly, intensifying. These are words that distinguish different conversations the most by occurring a lot in very few conversations. What if we want to look at which conversations are marked by important words specific to the Role?
 
 ```{r tf_idf02}
 fulltidy %>% 
@@ -472,10 +477,7 @@ fulltidy %>%
   filter(n > 10) %>% 
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
-```
 
-
-```{r tf_idf03}
 convo_tf_idf = fulltidy %>% 
   # mutate(Utterance = row_number()) %>% 
   unite('ConvoID', ConvoId,Role,sep = '--',remove = FALSE) %>% 
@@ -488,6 +490,7 @@ convo_tf_idf = fulltidy %>%
   slice_max(tf_idf, n = 10)
 ```
 
+Ah, here we see our favorite words 'children', 'charity'. This is completely in line with what we saw from the simple frequenncy plots. But not everyone's distinguishing conversation marker can be children, can it? Another observation is our counts. These words all have very low counts, less than 20 for each 'distinguishing' term. What's going on here?
 
 ```{r tf_idf04}
 role_words = convo_tf_idf %>% 
@@ -500,25 +503,31 @@ role_words = convo_tf_idf %>%
   summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
   group_by(Role) %>% 
   slice_max(tf_idf,n = 15)
-```
 
-
-```{r tf_idf05}
 role_words %>% 
   ggplot(aes(tf_idf,Word)) +
   geom_col() +
-  facet_wrap(~Role, scales = "free_y")
+  facet_wrap(~Role, scales = "free_y") +
+  labs(title = "Highest tf-idf words by Role", y = NULL, subtitle = " u sir is not a vary good description of our dataset")
 ```
+We're left with a confusing plot. It has two words 'u' and 'sir', claiming that the persuader used 'sir' more in a conversation then 'u' and the persuadee used it an even number of times. This is obvously meaningless, but tf-idf is a widely celebraated technique. Why did it fail?
 
-tf-idf, or **term frequency-inverse document frequency** in our case was an ineffective approach, as the document sizes (individual conversations) were too small. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
+tf-idf, or **term frequency-inverse document frequency** requires large enough document sizes, and in our case was an ineffective approach, as the document sizes (individual conversations) had too few words in it. At an average of [avg words per ConvoId]`r fulltidy %>% group_by(ConvoId) %>% count()`, there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
 
-Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which *words* stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings, such as religion, race, or personality trait.
+Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which *words* stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings of words, such as religion, race, or personality trait.
+
 The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
 
+```{r exit}
+knitr::knit_exit()
+```
 
 ## Log-Odds
 
 what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds]
+$$
+\log{p} = \log{\frac{p}{1 - p}} 
+$$
 so why should we use it/why tf-idf didn't work
 how is it weighting/what is it for
 but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data

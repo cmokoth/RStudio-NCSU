@@ -10,3 +10,11 @@ bibliography: references.bib
  year={2019}
 }
 
+@book{10.5555/3165010,
+author = {Silge, Julia and Robinson, David},
+title = {Text Mining with R: A Tidy Approach},
+year = {2017},
+isbn = {1491981652},
+publisher = {O’Reilly Media, Inc.},
+edition = {1st}
+}
