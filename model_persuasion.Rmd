@@ -345,7 +345,7 @@ wordcount <- left_join(words1, words2)
 
 To look at frequency, we have to look at examine how often something happens. To use the `count()` function, we have to examine how often something happens by category. In the first chunk creating `words1`,`words2`, and `wordcount`, we group by ConvoId, the unique identifier for each individual conversation held between two participants. 
 
-```{r wordcount}
+```{r wordcount01}
 # tidy the Dialogue to one obs per row, count by total words in sample
 wordcount1 = fullset %>%
   select(ConvoId,
@@ -354,7 +354,7 @@ wordcount1 = fullset %>%
   count(Word,sort = TRUE, name = "Count")
 ```
 
-And we have one grouped by word itself (Hint: this is just word frequency).
+And we have one grouped by word itself (this is simple word frequency).
 
 What do the distributions of the words look like compared to their conversation?
 
@@ -523,23 +523,31 @@ so why should we use it/why tf-idf didn't work
 how is it weighting/what is it for
 but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data
 
-```{r log_odds_role00}
+```{r lo_role00}
 # log-odds grouped by role
 role_lo = fulltidy %>%
   filter(!is.na(Role)) %>%
+  # 
   count(Word, Role, sort = TRUE) %>%
+  #
   bind_log_odds(Role, Word, n) %>%
+  #
   arrange(-log_odds_weighted) %>%
+  #
   group_by(Word) %>%     ## only keep words used over 50 times total
+  #
   filter(sum(n) > 10) %>% # how robust is log-odds
+  #
   ungroup %>%
+  #
   group_by(Role) %>%
+  #
   slice_max(log_odds_weighted, n = 10)    ## most likely by role
 ```
 
 Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
 
-```{r log_odds_role01}
+```{r lo_role01}
 role_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
   geom_col(show.legend = FALSE) +
@@ -549,7 +557,7 @@ role_lo %>%
 
 [observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
 
-```{r log_odds_relgion}
+```{r lo_relgion}
 # log-odds by interest trait: religion, sex, ideology, role, education
 # log-odds grouped by religion
 religion_lo = fulltidy %>%
@@ -572,7 +580,7 @@ religion_lo %>%
 
 Using log-odds to examine religion, we can learn a lot more about how people 
 
-```{r log_odds_sex}
+```{r lo_sex}
 # log-odds grouped by sex
 sex_lo = fulltidy %>%
   filter(!is.na(sex)) %>%
@@ -594,7 +602,7 @@ sex_lo %>%
 
 For sex, we can see that [observations]
 
-```{r log_odds_ideology}
+```{r lo_ideology}
 # log-odds grouped by ideology
 ideology_lo = fulltidy %>%
   filter(!is.na(ideology)) %>%
@@ -616,7 +624,7 @@ ideology_lo %>%
 
 With respect to political ideology, [observations]
 
-```{r log_odds_edu}
+```{r lo_edu}
 # log-odds grouped by role
 edu_lo = fulltidy %>%
   filter(!is.na(edu)) %>%
@@ -638,34 +646,69 @@ edu_lo %>%
 
 Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate)
 
+What else can we find out about what people are saying which words?
 
-## Values Modelling
 
+### Values Modelling
+
+Another exploration we can do is into the likelihood that you have a value and say a certain word. How likely are you to say it?
+
+For this section, we don't need to learn another technique (whew!). Just remembering some basic statistics and some darn good programming 
+
+We're going to go over each step of code here, and then reapply this same code to each value of the big five. 
 what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq
-```{r values_modelling_agree}
+```{r values_agree00}
 agree_freq <- fulltidy %>%
   filter(!is.na(agreeable)) %>%
+  # creating a count of Word by agreeable score
   count(agreeable, Word) %>%
+  # filling in implicit missing values
   complete(agreeable, Word, fill = list(n = 0)) %>%
+  # grouping the values to transform by group
   group_by(agreeable) %>%
+  # creating a frequency value for each group
   mutate(value_total = sum(n)) %>%
+  # ungrouping to transform by observation
   ungroup() %>%
+  # grouping values to transform by Word
   group_by(Word) %>%
+  # filter out words with fewer than 50 observations
   filter(sum(n) > 50) %>%
+  # ungrouping to transform by observation
   ungroup()
+```
 
+So we start by taking the fulltidy set we're been using [one word per row data] and creating a count by the agreeable score and the word, making a dataset with one word per score per observations. We then fill in every combination that may not exist, to make sure that there is an agreeable score 0-5 for every word in the set. We `group_by()` agreeable score to count up the number of times each score appears in the dataset and then `ungroup()`. Last, we regroup by Word, and filter out words that have less than 50 observations to create `agree_freq`.
+
+Next we create a little regression for each word, based on the individual value scores. We are using a binomial regression, indicated by `glm(cbind(n,value_total) ~ agreeable, family = "binomial")`. This just means our regression outputs are [binomial explanation]
+
+```{r values_agree01}
 agree_slopes <- agree_freq %>%
+  # making little tibbles in a tibble
   nest(tiny_tibbles = c(agreeable, n, value_total)) %>%
+  # running a linear model on each value-count combination using agreeable score 
   mutate(models = map(tiny_tibbles, ~glm(cbind(n, value_total) ~ agreeable, data = ., family = "binomial"))) %>%
+  # pull models out of the nested tibble
   mutate(models = map(models, tidy)) %>%
+  # drop tiny_tibbles
   select(-tiny_tibbles) %>%
+  # popping the models out of the glm object
   unnest(models) %>%
+  # selecting the estimates for agreeable effect
   filter(term == "agreeable") %>%
+  # adjusting the p values
   mutate(p.value = p.adjust(p.value))
+```
 
+
+
+```{r values_agree02}
 agree_slopes %>%
+  # selection criteria: the word slopes with the smallest p.values
   slice_min(p.value, n = 9) %>%
+  # 
   inner_join(agree_freq) %>%
+  ## plotting the value slopes
   ggplot(aes(agreeable, n / value_total)) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -675,9 +718,11 @@ agree_slopes %>%
        y = "Word frequency")
 ```
 
+And now we can see the likelihood of saying a word related to how agreeable someone is! People who are very agreeable are more likely to say 'yes'. People who are less agreeable are more likely to say 'hey'. We know something about the words and the sort of personalities are more or less likely to use them.
 
+You could apply this to any of the personality values in the dataset at all, including the Schwartz, any of them. There are some other interesting qualities to examine in the big five. Conscientiousness.
 
-```{r values_modelling_conscience}
+```{r values_conscience}
 conscience_freq <- fulltidy %>%
   filter(!is.na(conscientious)) %>%
   count(conscientious, Word) %>%
@@ -708,12 +753,11 @@ conscience_slopes %>%
   scale_y_continuous(labels = scales::percent_format()) +
   labs(x = "Conscientiousness score",
        y = "Word frequency")
-
 ```
 
+Next comes extroversion.
 
-
-```{r values_modelling_extrovert}
+```{r values_extrovert}
 extrovert_freq <- fulltidy %>%
   filter(!is.na(extrovert)) %>%
   count(extrovert, Word) %>%
@@ -746,9 +790,9 @@ extrovert_slopes %>%
        y = "Word frequency")
 ```
 
+Now for neuroticsm.
 
-
-```{r values_modelling_neurotic}
+```{r values_neurotic}
 neurotic_freq <- fulltidy %>%
   filter(!is.na(neurotic)) %>%
   count(neurotic, Word) %>%
@@ -781,9 +825,9 @@ neurotic_slopes %>%
        y = "Word frequency")
 ```
 
+And last, openness.
 
-
-```{r values_modelling_open}
+```{r values_open}
 open_freq <- fulltidy %>%
   filter(!is.na(open)) %>%
   count(open, Word) %>%
@@ -816,6 +860,8 @@ open_slopes %>%
        y = "Word frequency")
 ```
 
+For the last big topic, we are going to explore some unsupervised machine learning. 
+
 
 ## Topic Modelling
 
@@ -827,7 +873,11 @@ sparse_words <- fulltidy %>%
   mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
   count(Document, Word, sort = TRUE) %>%
   cast_sparse(Document, Word, n)
+```
 
+casting a sparse matrix is an essential step. this is the input that `stm()` takes and uses to train the model. 
+
+```{r topic_model01}
 library(stm)
 
 ## the model! the learning happens here
@@ -853,7 +903,6 @@ td_gamma %>%
   ggplot(aes(gamma, fill = factor(topic))) +
   geom_histogram(show.legend = FALSE) +
   facet_wrap(~topic)
-
 ```
 
 
@@ -896,7 +945,7 @@ k_result %>%
 LB: Convergence
 SC: Topic Quality
 K =? 60-70
-```{r semantic_convergence}
+```{r topic_model03}
 k_result %>%
   select(K, exclusivity, semantic_coherence) %>%
   filter(K %in% c(15,45,70,100)) %>%
@@ -911,7 +960,7 @@ k_result %>%
 ```
 Here, exclusivity is the goal, but not at the loss of semantic coherence. The models in the top left are the most efficient, while the models on the bottom right are the least efficient. As we can see, it is much easier for a model to have high semantic coherence when K (the number of groups) is small than when it is large. That's because semantic coherence is a shorthand for how much it makes sense for the words to be together. 
 
-```{r}
+```{r topic_model04}
 topic_model_1 <- k_result %>% 
   filter(K == 55) %>% 
   pull(topic_model) %>% 
