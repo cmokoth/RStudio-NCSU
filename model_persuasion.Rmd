@@ -867,7 +867,7 @@ For the last big topic, we are going to explore some unsupervised machine learni
 
 Unsupervised learning. We used a bunch of traits to group our data before, but what if those groups were meaningless? Are there better or more homogeneous groups of text that we can use? The answer is yes, and machine learning is going to help us find them.
 
-```{r topic_model01}
+```{r topic_model00}
 ## casting the text as a sparse matrix
 sparse_words <- fulltidy %>%
   mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
