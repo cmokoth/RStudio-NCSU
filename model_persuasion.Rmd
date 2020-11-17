@@ -378,14 +378,14 @@ wordcount1 %>%
 So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this phenomenon even more using Zipf's law.
 
 
-## Zipf's Law
+### Zipf's Law
 
 The phenomenon we just saw, the inverse relationship between word frequency and rank, has a name: Zipf's Law. Zipf's law is the observation that word frequency has an inverse relationship to rank.
 $$
 \text{frequency} \propto \frac{1}{\text{rank}}
 $$
 
-Zipf's law is based on rank, so here we build that into our dataset `freq_by_rank`. The $rank$ is how many times each word appears relative to other words in the sample. This is an abbreviated way of exploring how many times each word appears.
+Zipf's law is based on rank, so here we build that into our dataset `freq_by_rank`. The  is how many times each word appears relative to other words in the sample. This is an abbreviated way of exploring how many times each word appears.
 
 ```{r frequency_rank}
 # by convo_id
@@ -429,8 +429,6 @@ freq_by_rank1 %>%
 
 This plot of the entire data is nearly perfect. With a scaled x and y axis, we can see a nearly linear relationship appear in the data. There is a bit of bowing at the tails. Out data has fewer low ranking words than expected and fewer words with high rank than expected. We're going to take this idea a little further with tf-idf.
 
-explanation of the law (in words and in code) convincing the reader why and explaining the quantites and significance of the plots.
-
 
 ## Term Frequency - Inverse Document Frequency
 
@@ -467,50 +465,52 @@ fulltidy %>%
 The persuader has the largest tf-idf values for 2018, reportedly, intensifying. These are words that distinguish different conversations the most by occurring a lot in very few conversations. What if we want to look at which conversations are marked by important words specific to the Role?
 
 ```{r tf_idf02}
+# create tf-idf values for each individual (ConvoId by Role)
 fulltidy %>% 
-  # mutate(Utterance = row_number()) %>% 
   unite('ConvoId', ConvoId,Role,sep = '--',remove = FALSE) %>% 
   count(ConvoId,Word, sort = TRUE) %>% 
   bind_tf_idf(Word, ConvoId,n) %>% 
   arrange(-tf_idf) %>% 
   separate(ConvoId,into = c('ConvoId','Role'),sep = '--') %>% 
-  filter(n > 10) %>% 
+  filter(n > 10) %>% ## the difference between this
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
 
+# create tf-idf values for each individual (ConvoId by Role)
 convo_tf_idf = fulltidy %>% 
-  # mutate(Utterance = row_number()) %>% 
   unite('ConvoID', ConvoId,Role,sep = '--',remove = FALSE) %>% 
   count(ConvoID,Word, sort = TRUE) %>% 
   bind_tf_idf(Word,ConvoID,n) %>% 
   arrange(-tf_idf) %>% 
-  # filter(n > 10) %>% 
   separate(ConvoID,into = c('ConvoId','Role'),sep = '--') %>% 
   group_by(Role) %>% 
   slice_max(tf_idf, n = 10)
 ```
 
-Ah, here we see our favorite words 'children', 'charity'. This is completely in line with what we saw from the simple frequenncy plots. But not everyone's distinguishing conversation marker can be children, can it? Another observation is our counts. These words all have very low counts, less than 20 for each 'distinguishing' term. What's going on here?
+The code for both of these is very similar. Essentially, it groups ConvoId and Role into one column to do `bind_tf_idf()` and then splits them apart [`bind_tf_idf()` only takes one grouping variable, so `unite()` makes it possible]. 
 
-```{r tf_idf04}
+Ah, here we see our favorite words 'children', 'charity'. This is completely in line with what we saw from the simple frequency plots. But not everyone's distinguishing conversation marker can be children, can it? Another observation is our counts. These words all have very low counts, less than 20 for each 'distinguishing' term. What's going on here?
+
+```{r tf_idf03}
+# grouping tf_idf by Role
 role_words = convo_tf_idf %>% 
   group_by(Word) %>% 
-  filter(sum(n) > 10) %>% # only keep words used over 50 times total
+  filter(sum(n) > 10) %>% ## only keep words used over 10 times total
   ungroup() %>% 
-  group_by(Role,Word) %>% # most distinct words by role
-  # distinct(Word, Role, .keep_all = TRUE)
-  # slice_max(tf_idf,n = 15)
-  summarise(tf_idf = mean(tf_idf)) %>% # mean distinctive
+  group_by(Role,Word) %>% ## most distinct words by role
+  summarise(tf_idf = mean(tf_idf)) %>% ## mean distinctive
   group_by(Role) %>% 
   slice_max(tf_idf,n = 15)
 
+# plot tf_idf by Role
 role_words %>% 
-  ggplot(aes(tf_idf,Word)) +
-  geom_col() +
+  ggplot(aes(tf_idf,Word, fill = Role)) +
+  geom_col(show.legend = FALSE) +
   facet_wrap(~Role, scales = "free_y") +
-  labs(title = "Highest tf-idf words by Role", y = NULL, subtitle = " u sir is not a vary good description of our dataset")
+  labs(title = "Highest tf-idf words by Role", y = NULL, subtitle = " 'u sir' is not a vary good description of our dataset")
 ```
-We're left with a confusing plot. It has two words 'u' and 'sir', claiming that the persuader used 'sir' more in a conversation then 'u' and the persuadee used it an even number of times. This is obvously meaningless, but tf-idf is a widely celebraated technique. Why did it fail?
+
+We're left with a confusing plot. It has two words 'u' and 'sir', claiming that the persuader used 'sir' more in a conversation then 'u' and the persuadee used it an even number of times. This is obviously meaningless, but tf-idf is a widely celebrated technique. Why did it fail?
 
 tf-idf, or **term frequency-inverse document frequency** requires large enough document sizes, and in our case was an ineffective approach, as the document sizes (individual conversations) had too few words in it. At an average of [avg words per ConvoId]`r fulltidy %>% group_by(ConvoId) %>% count()`, there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
 
@@ -532,39 +532,41 @@ so why should we use it/why tf-idf didn't work
 how is it weighting/what is it for
 but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data
 
+With a slight modification, we can use log-odds to create a new frequency statsitic. 
+
 ```{r lo_role00}
 # log-odds grouped by role
 role_lo = fulltidy %>%
   filter(!is.na(Role)) %>%
-  # 
+  # count each Word by Role
   count(Word, Role, sort = TRUE) %>%
-  #
+  # creates weighted log_odds by Role
   bind_log_odds(Role, Word, n) %>%
-  #
+  # sort highest to lowest log_odds
   arrange(-log_odds_weighted) %>%
-  #
-  group_by(Word) %>%     ## only keep words used over 50 times total
-  #
-  filter(sum(n) > 10) %>% # how robust is log-odds
-  #
+  # 
+  group_by(Word) %>%     
+  # filter out words used less than 10 times
+  filter(sum(n) > 10) %>% ## only keep words used over 50 times total
+  # ungroup by word
   ungroup %>%
-  #
+  # regroup by Role
   group_by(Role) %>%
-  #
+  # select the highest log odds
   slice_max(log_odds_weighted, n = 10)    ## most likely by role
 ```
 
-Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using [what is log-odds] to weight variable 
+Weighted Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using logarithm of the odds [the likelihood of a particular outcome] to weight variable across documents. The main difference is that rather than measuring simple frequency per Word per group, we measure the logarithm of the odds. What are we left with? 
 
 ```{r lo_role01}
 role_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = Role)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~Role, scales = "free_y") +
-  labs(y = NULL)
+  labs(title = "Log Odds: Role",y = NULL, subtitle = "Persuaders flexed their vocabulary. Persuadees agreed with them")
 ```
 
-[observations] These plots look completely different, the persuaders tending towards specific, large words and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'
+Now these are real words that we can interpret! Log-Odds wasn't as dependent on raw frequency, so it was able to adjust better for low counts with its weighting. These plots look completely different, the persuaders tending towards specific, large adjectives and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'. Lets look at our four traits.
 
 ```{r lo_relgion}
 # log-odds by interest trait: religion, sex, ideology, role, education
@@ -584,7 +586,7 @@ religion_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = religion)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~religion, scales = "free_y") +
-  labs(y = NULL)
+  labs(title = "Log Odds: Religion", y = NULL, subtitle = "Distinct verbal differences seem to be apparent between every group")
 ```
 
 Using log-odds to examine religion, we can learn a lot more about how people 
@@ -606,10 +608,10 @@ sex_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = sex)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~sex, scales = "free") +
-  labs(y = NULL, x = "Log Odds Ratio",)
+  labs(title = "Log Odds: Gender",y = NULL, subtitle = "Some crossovers between groups: women say 'wonderful' and men say 'ok'")
 ```
 
-For sex, we can see that [observations]
+For sex, we can see that men are using some shorter words than women, and 'hit'. Women are emphasizing choose and 
 
 ```{r lo_ideology}
 # log-odds grouped by ideology
@@ -628,7 +630,7 @@ ideology_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted),fill = ideology)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ideology, scales = "free_y") +
-  labs(y = NULL)
+  labs(title = "Log Odds: Political Ideology",y = NULL, subtitle = "Conservatives talk about flooding, liberals talk about mexico, moderates talk to each other")
 ```
 
 With respect to political ideology, [observations]
@@ -650,22 +652,23 @@ edu_lo %>%
   ggplot(aes(log_odds_weighted, fct_reorder(Word, log_odds_weighted), fill = edu)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~edu, scales = "free_y") +
-  labs(y = NULL)
+  labs(title = "Log Odds: Educational Background",y = NULL, subtitle = "Education groups showed no overlap between common words")
 ```
 
-Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate)
+Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate). The distinct words in each group is different than the other traits, meaning this measure may be indicating distinction in the way people speak depending on their level of education!
 
 What else can we find out about what people are saying which words?
 
 
 ### Values Modelling
 
-Another exploration we can do is into the likelihood that you have a value and say a certain word. How likely are you to say it?
+Another exploration we can do is into the likelihood that you have a personal value and say a certain word. How likely are you to say it?
 
-For this section, we don't need to learn another technique (whew!). Just remembering some basic statistics and some darn good programming 
+For this section, we don't need to learn another technique (whew!). Just remembering some basic statistics and some darn good programming. We're examining each component of the OCEAN big five model, which gives you a score in five categories: extroversion, agreeableness, conscientiousness, neurotics, openness. 
 
 We're going to go over each step of code here, and then reapply this same code to each value of the big five. 
 what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq
+
 ```{r values_agree00}
 agree_freq <- fulltidy %>%
   filter(!is.na(agreeable)) %>%
