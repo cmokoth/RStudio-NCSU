@@ -132,7 +132,7 @@ fulltidy = fullset %>%
     mutate(
     # levels of religion
     religion = factor(religion, levels = c("Catholic","Protestant","Atheist","Other religion"), 
-                      labels = c("Catholic","Protestant","Atheist","Other religion")), 
+                      labels = c("Catholic","Protestant","Atheist","Other religions")), 
     # levels of sex
     sex = factor(sex, levels = c("Male","Female","Other"),
                  labels = c("Male","Female","Other Genders")), 
@@ -354,7 +354,7 @@ wordcount1 = fullset %>%
   count(Word,sort = TRUE, name = "Count")
 ```
 
-And we have one grouped by word itself (this is simple word frequency).
+And we have one grouped by word itself [this is simple word frequency].
 
 What do the distributions of the words look like compared to their conversation?
 
@@ -400,7 +400,7 @@ freq_by_rank1 = wordcount1 %>%
          `term frequency` = Count)
 ```
 
-Similarly to word frequency, we create a rank for each word based on how often it's used in each group (ConvoId) or in the entire set. Creating a rank is rather simple as `count(sort = TRUE)` organizes the data based on frequency automatically. We also create a second `freq_by_rank1` to measure rank of words across the entire dataset, not just within `ConvoId` groups.
+Similarly to word frequency, we create a rank for each word based on how often it's used in each group [ConvoId] or in the entire set. Creating a rank is rather simple as `count(sort = TRUE)` organizes the data based on frequency automatically. We also create a second `freq_by_rank1` to measure rank of words across the entire dataset, not just within `ConvoId` groups.
 
 So what can we make with this?
 
@@ -430,9 +430,11 @@ freq_by_rank1 %>%
 This plot of the entire data is nearly perfect. With a scaled x and y axis, we can see a nearly linear relationship appear in the data. There is a bit of bowing at the tails. Out data has fewer low ranking words than expected and fewer words with high rank than expected. We're going to take this idea a little further with tf-idf.
 
 
-## Term Frequency - Inverse Document Frequency
+### Term Frequency - Inverse Document Frequency
 
-Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. 
+Term frequency - inverse document frequency is a statistic intended to measure the relative importance of a word within a document, compared to similar documents.This method is very common for search engines, efficiently sorting out which words are common across all websites and which are common only on certain pages. $$ tf \times \log(\frac{N}{df})$$
+where tf is term frequency, df is document frequency, and N is number of documents. Term frequency is simple frequency within the document, and inverse document frequency is the logarithm of number of documents over the number of documents containing the term.
+
 We can apply this method to investigate deeper into the data. We have already looked at which words are the most common according to role and the entire body of work. Now we can look at how common certain words are within each conversation. 
 
 To create a ranked set, we use `ConvoId` as a grouping factor, or document.
@@ -512,27 +514,25 @@ role_words %>%
 
 We're left with a confusing plot. It has two words 'u' and 'sir', claiming that the persuader used 'sir' more in a conversation then 'u' and the persuadee used it an even number of times. This is obviously meaningless, but tf-idf is a widely celebrated technique. Why did it fail?
 
-tf-idf, or **term frequency-inverse document frequency** requires large enough document sizes, and in our case was an ineffective approach, as the document sizes (individual conversations) had too few words in it. At an average of [avg words per ConvoId]`r fulltidy %>% group_by(ConvoId) %>% count()`, there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
+tf-idf, or **term frequency-inverse document frequency** requires large enough document sizes, and in our case was an ineffective approach, as the document sizes (individual conversations) had too few words in it. At an average of [avg words per ConvoId], there are not enough unique words to distinguish which words are valuable and which words are not. Some words had such low counts (typos, speaking styles), tf-idf was useless in identifying their importance as typos or important words.
 
 Methodologically, this makes sense. Each conversation has a common goal, and while there are different persuasion styles, tf-idf will only tell us which *words* stand out in each conversation. The conversations were not particularly specialized, so the most we could utilize  tf-idf is observing surface-level differences between larger groupings of words, such as religion, race, or personality trait.
 
 The mark of a good programmer is being able to use her tools. The mark of a great one is knowing each tools' limits and finding an alternative path. The next approach is log-odds.
 
-```{r exit}
-knitr::knit_exit()
-```
+<!-- `fulltidy %>% group_by(ConvoId) %>% count()` -->
 
 ## Log-Odds
+Let's try log-odds. Log-odds is a logarithm of the probability of success over the probability of failure. Here we define success as a word being contained in a document and failure as a word not being in a documents.
 
-what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds]
-$$
-\log{p} = \log{\frac{p}{1 - p}} 
-$$
-so why should we use it/why tf-idf didn't work
+<!-- what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds] -->
+$$ \log{p} = \log{\frac{p}{1 - p}} $$
+Similarly to tf-idf, we measure frequency of the term, but the frequency  in log-odds is the frequency of the term over the infrequency [frequency of anything else] of the term. Instead of weighting by documents over document frequency, you weight with relative frequency. This keeps our most common words 'children', 'save' from falling through the cracks even through they're important. 
+<!-- so why should we use it/why tf-idf didn't work
 how is it weighting/what is it for
-but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data
+but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data -->
 
-With a slight modification, we can use log-odds to create a new frequency statsitic. 
+With a slight modification, we can use log-odds to create a new frequency statistic. 
 
 ```{r lo_role00}
 # log-odds grouped by role
@@ -556,7 +556,7 @@ role_lo = fulltidy %>%
   slice_max(log_odds_weighted, n = 10)    ## most likely by role
 ```
 
-Weighted Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using logarithm of the odds [the likelihood of a particular outcome] to weight variable across documents. The main difference is that rather than measuring simple frequency per Word per group, we measure the logarithm of the odds. What are we left with? 
+Weighted Log Odds is a technique comparing the frequency of the words in the text to the frequency of the words in each grouping. This technique differs from term frequency-inverse document frequency, because  tf-idf uses the frequency of the words and compares which words are different across documents, using a relative search to estimate importance. Log-odds approach is different, using logarithm of the odds and Bayesian inference to weight variable across documents. The main difference is that rather than measuring simple frequency per Word per group, we measure the logarithm of the odds. What are we left with? 
 
 ```{r lo_role01}
 role_lo %>%
@@ -566,7 +566,7 @@ role_lo %>%
   labs(title = "Log Odds: Role",y = NULL, subtitle = "Persuaders flexed their vocabulary. Persuadees agreed with them")
 ```
 
-Now these are real words that we can interpret! Log-Odds wasn't as dependent on raw frequency, so it was able to adjust better for low counts with its weighting. These plots look completely different, the persuaders tending towards specific, large adjectives and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'. Lets look at our four traits.
+Now these are real words that we can interpret! Log-Odds isn't as dependent on raw frequency, so it is able to adjust better for low counts with its weighting. These plots look completely different, the persuaders tending towards specific, large adjectives and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'. Lets look at our four traits.
 
 ```{r lo_relgion}
 # log-odds by interest trait: religion, sex, ideology, role, education
@@ -574,7 +574,7 @@ Now these are real words that we can interpret! Log-Odds wasn't as dependent on 
 religion_lo = fulltidy %>%
   filter(!is.na(religion)) %>%
   count(Word, religion, sort = TRUE) %>%
-  bind_log_odds(religion, Word, n) %>%
+  bind_log_odds(religion, Word, n) %>% 
   arrange(-log_odds_weighted) %>%
   group_by(Word) %>%     ## only keep words used over 50 times total
   filter(sum(n) > 10) %>% # how robust is log-odds
@@ -589,7 +589,7 @@ religion_lo %>%
   labs(title = "Log Odds: Religion", y = NULL, subtitle = "Distinct verbal differences seem to be apparent between every group")
 ```
 
-Using log-odds to examine religion, we can learn a lot more about how people 
+Using log-odds to examine religion, we can learn a lot more about how people see the world. We have some interesting words, including 'stc' which means 'subject to change' in text speak. Protestants also mention 'starvation' and 'church'. The catholics do not mention church, instead seem to talk about themselves often with 'iam' and relate it to 'veterans'. They also use 'good' and 'super' often. Atheists say 'born' and 'rate' more than any other words, and make reference to the 'rohingya' genocide. Other religions mention 'foundations' and 'national', seemingly making reference to  other aid campaigns. 'Disney' also makes the list.
 
 ```{r lo_sex}
 # log-odds grouped by sex
@@ -611,7 +611,7 @@ sex_lo %>%
   labs(title = "Log Odds: Gender",y = NULL, subtitle = "Some crossovers between groups: women say 'wonderful' and men say 'ok'")
 ```
 
-For sex, we can see that men are using some shorter words than women, and 'hit'. Women are emphasizing choose and 
+For gender, we can see that men are using some shorter words than women, and 'hit'. Women are emphasizing 'choose' and . Something interesting is how '2' makes the list in both instances. So does 'going' and 'directly'. The other genders represented in our sample are on par with the most popular words across the sample in terms of basic frequency.
 
 ```{r lo_ideology}
 # log-odds grouped by ideology
@@ -633,7 +633,7 @@ ideology_lo %>%
   labs(title = "Log Odds: Political Ideology",y = NULL, subtitle = "Conservatives talk about flooding, liberals talk about mexico, moderates talk to each other")
 ```
 
-With respect to political ideology, [observations]
+With respect to political ideology, conservatives seem to be concerned with 'flooding', perhaps referring to natural disaster relief funds. They mention 'church' like the protestants, but also 'sleep' and 'dinner'. Moderates also have 'iam' [similar to catholics] but includes 'drinking' and 'virginia'. Liberals also mention 'mexico' [atheists do too] and 'corporations' and 'bot'. 
 
 ```{r lo_edu}
 # log-odds grouped by role
@@ -655,7 +655,7 @@ edu_lo %>%
   labs(title = "Log Odds: Educational Background",y = NULL, subtitle = "Education groups showed no overlap between common words")
 ```
 
-Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback (liberal/atheist) and 'iam'/'ur' (moderate). The distinct words in each group is different than the other traits, meaning this measure may be indicating distinction in the way people speak depending on their level of education!
+Most words have a fairly uniform frequency within the groups, but it appears the postgraduates kept closely to the top words from the overall sample. Less than college found 'iam' and 'ur', shorthand for I am and you are. 'mexico' also made a comeback [liberal/atheist] and 'iam'/'ur' [moderate]. The distinct words in each group is different than the other traits, meaning this measure may be indicating distinction in the way people speak depending on their level of education!
 
 What else can we find out about what people are saying which words?
 
@@ -667,7 +667,7 @@ Another exploration we can do is into the likelihood that you have a personal va
 For this section, we don't need to learn another technique (whew!). Just remembering some basic statistics and some darn good programming. We're examining each component of the OCEAN big five model, which gives you a score in five categories: extroversion, agreeableness, conscientiousness, neurotics, openness. 
 
 We're going to go over each step of code here, and then reapply this same code to each value of the big five. 
-what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq
+<!-- what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq -->
 
 ```{r values_agree00}
 agree_freq <- fulltidy %>%
@@ -692,7 +692,7 @@ agree_freq <- fulltidy %>%
 
 So we start by taking the fulltidy set we're been using [one word per row data] and creating a count by the agreeable score and the word, making a dataset with one word per score per observations. We then fill in every combination that may not exist, to make sure that there is an agreeable score 0-5 for every word in the set. We `group_by()` agreeable score to count up the number of times each score appears in the dataset and then `ungroup()`. Last, we regroup by Word, and filter out words that have less than 50 observations to create `agree_freq`.
 
-Next we create a little regression for each word, based on the individual value scores. We are using a binomial regression, indicated by `glm(cbind(n,value_total) ~ agreeable, family = "binomial")`. This just means our regression outputs are [binomial explanation]
+Next we create a little regression for each word, based on the individual value scores. We are using a binomial regression, indicated by `glm(cbind(n,value_total) ~ agreeable, family = "binomial")`. This just means our regression outputs are likelihoods of success [the likelihood of a word appearing, p].
 
 ```{r values_agree01}
 agree_slopes <- agree_freq %>%
@@ -712,7 +712,9 @@ agree_slopes <- agree_freq %>%
   mutate(p.value = p.adjust(p.value))
 ```
 
+We pull the regression back out of the tibbles and unnest the models. We filter on the term 'agreeable' to get the slopes for each word, and adjust the p values so they can be compared. 
 
+To put it into a nice looking plot, we look at the smallest p values [smallest coincidental effect] and join to `agree_slopes` to get the counts [n and value_total] and we can plug the 
 
 ```{r values_agree02}
 agree_slopes %>%
@@ -726,13 +728,12 @@ agree_slopes %>%
   geom_smooth(method = "lm") +
   facet_wrap(~Word) +
   scale_y_continuous(labels = scales::percent_format()) +
-  labs(x = "Agreeableness score",
-       y = "Word frequency")
+  labs(title = "The Big Five: Agreeable",x = "Agreeableness score", y = "Word frequency",subtitle = "Agreeable people are more likely to say donate and yes")
 ```
 
 And now we can see the likelihood of saying a word related to how agreeable someone is! People who are very agreeable are more likely to say 'yes'. People who are less agreeable are more likely to say 'hey'. We know something about the words and the sort of personalities are more or less likely to use them.
 
-You could apply this to any of the personality values in the dataset at all, including the Schwartz, any of them. There are some other interesting qualities to examine in the big five. Conscientiousness.
+You can apply this to any of the personality values in the dataset at all, including the Schwartz, any of them. There are some other interesting qualities to examine in the big five. Let's look at conscientiousness.
 
 ```{r values_conscience}
 conscience_freq <- fulltidy %>%
@@ -763,11 +764,10 @@ conscience_slopes %>%
   geom_smooth(method = "lm") +
   facet_wrap(~Word) +
   scale_y_continuous(labels = scales::percent_format()) +
-  labs(x = "Conscientiousness score",
-       y = "Word frequency")
+  labs(title = "The Big Five: Conscientiousness",x = "Conscientiousness score", y = "Word frequency", subtitle = "Conscientious people are more likely to say donate and know less but yes more")
 ```
 
-Next comes extroversion.
+Consicentiousness seems to be related to saying 'yeah' less but 'yes' more. It also shows a rather large negative relationship for 'donate' and 'know'. Next comes extroversion.
 
 ```{r values_extrovert}
 extrovert_freq <- fulltidy %>%
@@ -834,10 +834,10 @@ neurotic_slopes %>%
   facet_wrap(~Word) +
   scale_y_continuous(labels = scales::percent_format()) +
   labs(x = "Neuroticsm score",
-       y = "Word frequency")
+       y = "Word frequency", subtitle = "Neuroticism is associated with lower likelihood of saying help and big")
 ```
 
-And last, openness.
+People with lower neuroticsm scores are more likely to say big but less likely to say 'sorry' or 'oh'. They're more likely to say 'hits'. And last, openness.
 
 ```{r values_open}
 open_freq <- fulltidy %>%
@@ -868,10 +868,12 @@ open_slopes %>%
   geom_smooth(method = "lm") +
   facet_wrap(~Word) +
   scale_y_continuous(labels = scales::percent_format()) +
-  labs(x = "Openess score",
-       y = "Word frequency")
+  labs(title = "The Big Five: Openness",x = "Openess score",y = "Word frequency", subtitle = "Open people are less likely to say ok and yes")
 ```
 
+People who score high on openness seem less likely to say a number of words, including yes [like agreeable]. 
+
+<!--
 For the last big topic, we are going to explore some unsupervised machine learning. 
 
 
@@ -879,7 +881,7 @@ For the last big topic, we are going to explore some unsupervised machine learni
 
 Unsupervised learning. We used a bunch of traits to group our data before, but what if those groups were meaningless? Are there better or more homogeneous groups of text that we can use? The answer is yes, and machine learning is going to help us find them.
 
-```{r topic_model00}
+```{r topic_model00, eval = FALSE, include = FALSE}
 ## casting the text as a sparse matrix
 sparse_words <- fulltidy %>%
   mutate(Document = paste(ConvoId, Role, sep = "_")) %>%
@@ -889,7 +891,7 @@ sparse_words <- fulltidy %>%
 
 casting a sparse matrix is an essential step. this is the input that `stm()` takes and uses to train the model. 
 
-```{r topic_model01}
+```{r topic_model01, eval = FALSE, include = FALSE}
 library(stm)
 
 ## the model! the learning happens here
@@ -919,7 +921,7 @@ td_gamma %>%
 
 
 
-```{r topic_model02}
+```{r topic_model02, eval = FALSE, include = FALSE}
 plan(multiprocess)
 
 many_models <- data_frame(K = c(15,25,35,45,55,70,85,100)) %>%
@@ -957,7 +959,7 @@ k_result %>%
 LB: Convergence
 SC: Topic Quality
 K =? 60-70
-```{r topic_model03}
+```{r topic_model03, eval = FALSE, include = FALSE}
 k_result %>%
   select(K, exclusivity, semantic_coherence) %>%
   filter(K %in% c(15,45,70,100)) %>%
@@ -972,7 +974,7 @@ k_result %>%
 ```
 Here, exclusivity is the goal, but not at the loss of semantic coherence. The models in the top left are the most efficient, while the models on the bottom right are the least efficient. As we can see, it is much easier for a model to have high semantic coherence when K (the number of groups) is small than when it is large. That's because semantic coherence is a shorthand for how much it makes sense for the words to be together. 
 
-```{r topic_model04}
+```{r topic_model04, eval = FALSE, include = FALSE}
 topic_model_1 <- k_result %>% 
   filter(K == 55) %>% 
   pull(topic_model) %>% 
@@ -980,6 +982,6 @@ topic_model_1 <- k_result %>%
 
 topic_model
 ```
-
+-->
 ## Summary
-goal, what to learn, what was done, how, expressions!
+As many ways as we explored text in this project, we didn't even touch on topic modelling or prediction. Primarily, we looked at the different ways that text interacted with different traits of our participants: ideology, gender, openness to new experiences. There are plenty of ways to analyze text and find something meaningful in it, and 
