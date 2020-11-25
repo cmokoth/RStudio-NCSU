@@ -27,5 +27,7 @@ text_df
 Now to go from lines to words (for tidy text method, each word is a token. In Persuasion, they examine each sentence as a token)
 ```{r}
 unnest_tokens(words,text)
+
+full_d_raw %>% filter(str_detect(Dialogue,"ª ")) %>% pull(Dialogue)
 ```
 

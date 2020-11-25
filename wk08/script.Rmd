@@ -1,0 +1,58 @@
+---
+title: "modelling persuasion: script"
+subtitle: "audio accompaniment to modelling persuasion"
+author: "Christian Okoth"
+output:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+```{r import, child=c('.../model_persuasion.Rmd')}
+
+```
+
+<!-- 750 words ~ 5 minutes -->
+## Introduction
+Hello! My name is Christian Okoth and this is the audio accompaniment to modelling persuasion, a mentored collaboration between the NC State Statistic department and the RStudio foundation. This project uses data from MIT's Persuasion for Good paper.
+
+<!-- explain the paper/dataset - read here and understand - explain aims & big picture -->
+The data is a large set of quantitative data and free text, which made it easy to find groupings and pairings. The text data were generated in an online format between participants attempting to convince each other to donate to a good cause. The original paper attempted to collect samples for speech to teach ai's and response bots how to $better persuade people using personalized information to target their bots more efficiently. Wang et. al. includes the full set of text and participant information in raw and annotated format. This analysis doesn't reach into the annotated data, but it does explore the full dialogue and participant information.
+
+## Data import and Formatting
+So we read in the `full_d_raw` and `full_i_raw`. I renamed all the data in the initial import step, to make things easier to reference later on. The respective `select()` functions contain all the name transformations. `full_d_raw` holds all the dialogue for this experiment contained in a container called 'Dialogue'. As you can see, there are full exchanges, all the things someone said on their turn in each row. 'ConvoId' serves as a key, along with 'Role' to join together this dataset with `full_i_raw`, where all the user ID's and demographic information lives.
+As you can see, the 'Dialogue' container holds multiple words and sentences exacltly as they were typed. The annotated data is loaded for the intended donation variable.
+This large section of data in this `mutate()` function is relabelling all of the relevant demographic variables. They're being transformed into factor variables, a type of character variable, to rename the levels and order the variables.
+
+### Tidy Text
+To use the text data, we're going to reformat the 'Dialogue' container from multiple sentences and punctuation to a one word per row format, also called the tidy text approach, dubbed by Hadley Wickham. The function `unnest_tokens()` is useful here, as it automatically parses the data into one word per row. Now, there are 1017 conversations in this dataset, so the dataset `fulltidy` is much longer now. There are a lot of extra things in the data now that aren't useful, so we used an anti_join to eliminate the 'stopwords' as they're called. Stopwords are words that are extremely common and necessary to speech, but don't contain as much information as many of the other words in the set. Some examples include 'you', 'am', 'like' and other common words that don't mean much on their own.
+
+## Exploratory Data Analysis
+
+### Donations Aside
+<!-- drawing connections but not implications -->
+
+### Traits and Values
+<!-- explain what each of these metrics are -->
+
+## Rank and Frequency
+
+### Zipf's Law
+
+### Term Frequency - Inverse Document Frequency
+
+## Log-Odds
+<!-- what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds] -->
+
+<!-- so why should we use it/why tf-idf didn't work
+how is it weighting/what is it for
+but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data -->
+
+### Values Modelling
+<!-- what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq -->
+
+<!-- what about persuaders/persuadees; ppl with different characteristics do use different words; remind the results with strongest evidence for -->
+
+<!-- what did i do (process and background) and what did i learn and read the results (in a link) -->

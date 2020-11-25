@@ -2,12 +2,12 @@
 title: "modelling persuasion"
 author: "Christian Okoth"
 output:
+  word_document:
+    toc: yes
   html_document:
     theme: simplex
     toc: yes
     toc_float: yes
-  word_document:
-    toc: yes
 bibliography: bibliography.bib
 ---
 
@@ -25,7 +25,7 @@ theme_set(theme_gdocs())
 ## Introduction
 
 This project is an exploration of text processing using methods from term frequency to unsupervised clustering. The data for this project come from MIT's Persuasion for Good dataset [@wang2019persuasion].
-<!-- explain the paper/dataset - read here and understand - explain aims & big picture -->
+
 Text data are being generated constantly - reviews, surveys and questionnaires, text messages even! Reading every word and deriving meaning from it is very possible, a technique called coding. But what about when instead of five speakers there are 200? Or each person speaks for an hour instead of thirty minutes? How can we scale up our analysis of human text and speech using programming?
 
 I am loading a number of packages here, marked each for the different sections they're used in. Some are essential [`tidyverse`] while others are nice to have [`skimr`]. Either way, I've split them into three distinct sections: tidying the text (we'll talk about what that means), analyzing text data, and unsupervised machine learning (clustering). 
@@ -62,7 +62,7 @@ full_d_raw = read_csv('data/FullData/full_dialog.csv',
     Role = B4, # (0 = persuader, 1 = persuadee)
     Dialogue = Unit
     )
-
+# full_i for the full participant table, not annotated
 full_i_raw = read_csv('data/FullData/full_info.csv',
          col_names = TRUE) %>% 
   rename_with(~str_remove(.,"\\.x$")) %>% 
@@ -76,7 +76,7 @@ full_i_raw = read_csv('data/FullData/full_info.csv',
     )
 ```
 
-Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there. This dataset contains some important variables we need to understand. First, in `full_d_raw`, we have ConvoId, which is the unique identifier of each conversation held between two participants; There is Role, a boolean (0/1) value that indicates whether a participant is the persuader (0) or the persuadee (1). Role alternates every row, which contains the Dialogue, everything that someone said (typed) during their speaking turn. 
+Reading the data in, there were some interesting formatting choices. In `full_i_raw`, columns about personality traits and personal characteristics were marked as 'extrovert.x income.x conscientious.x religion.x' et cetera and there: the `~str_remove()` creates a function to get rid of the trailing x's. This dataset contains some important variables we need to understand. First, in `full_d_raw`, we have ConvoId, which is the unique identifier of each conversation held between two participants. There is Role, a boolean (0/1) value that indicates whether a participant is the persuader (0) or the persuadee (1). Role alternates every row, which contains the Dialogue, everything that someone said (typed) during their speaking turn. 
 
 In `full_i_raw`, we need to know about all of these variables, and we will look into them as they come up. What's important to know is that `full_i_raw` also has ConvoId and Role, two variables contained in the `full_d_raw` and `full_i_raw` dataset. These are our joining variables for the next step.
 
@@ -269,7 +269,6 @@ full_i_raw %>%
 ```
 
 Something cool about this dataset is that each participant took three personality tests before the discussion. The big five, a major psychometric personality test, is the one we focus on in this analysis, but a further analysis may evaluate the sample using the Schwartz portrait, moral foundations, and decision making model. The big five model here shows us the different sorts of people we have and their values.
-<!-- explain what each of these metrics are -->
 
 Now we'll look at our sample and their different traits. I made plots of each variable, simply visualizing the sample to understand what the best characteristics would be to group by. Rather than examining the entire population as a group, we can breakout traits to see if they are related to which words participants used. To figure our the best traits to examine however, we look at distributions and the relationships between the different variables.
 
@@ -530,12 +529,8 @@ The mark of a good programmer is being able to use her tools. The mark of a grea
 ## Log-Odds
 Let's try log-odds. Log-odds is a logarithm of the probability of success over the probability of failure. Here we define success as a word being contained in a groups and failure as a word not being in a group
 
-<!-- what is log odds what does it measure relative to groups (ratio of ratios) [bind_log_odds] -->
 $$ \log{p} = \log{\frac{p}{1 - p}} $$
 Similarly to tf-idf, we measure frequency of the term, but the frequency  in log-odds is the frequency of the term over the infrequency [frequency of anything else] of the term. Instead of weighting by documents over document frequency, you weight with relative frequency. This keeps our most common words 'children', 'save' from falling through the cracks even through they're important.  
-<!-- so why should we use it/why tf-idf didn't work
-how is it weighting/what is it for
-but what does she *do* (explain theory and mechanics) uses distribution of the data estimated from the data -->
 
 With a slight modification, we can use log-odds to create a new frequency statistic. 
 
@@ -572,7 +567,7 @@ role_lo %>%
 ```
 
 Now these are real words that we can interpret! Weighted log-odds isn't as dependent on raw frequency, so it is able to adjust better for low counts with its weighting. These plots look completely different, the persuaders tending towards specific, large adjectives and nearly all of the persuadees using positively associated filler words, like 'oh', 'ok', 'sure'. Lets look at our four traits.
-scales the 
+
 ```{r lo_relgion, fig.height=7}
 # log-odds by interest trait: religion, sex, ideology, role, education
 # log-odds grouped by religion
@@ -673,7 +668,6 @@ Another exploration we can do is into the likelihood that you have a personal va
 For this last section, we don't need to learn another technique (whew!). Just remembering some basic statistics and some darn good programming. We're examining each component of the OCEAN big five model, which gives you a score in five categories: extroversion, agreeableness, conscientiousness, neurotics, openness. 
 
 We're going to go over each step of code here, and then reapply this same code to each value of the big five. 
-<!-- what kind of model are we using? not trying to account for individuals, but aggregated scores/word freq -->
 
 ```{r values_agree00}
 agree_freq <- fulltidy %>%
@@ -997,9 +991,5 @@ topic_model
 -->
 ## Summary
 As many ways as we explored text in this project, we didn't even touch on topic modelling or prediction. Primarily, we looked at the different ways that text interacted with different traits of our participants: ideology, gender, openness to new experiences. There are plenty of ways to analyze text and find something meaningful in it, and our two part exploration was certainly not exhaustive. 
-
-<!-- what about persuaders/persuadees; ppl with different characteristics do use different words; remind the results with strongest evidence for -->
-
-<!-- what did i do (process and background) and what did i learn and read the results (in a link) -->
 
 ## References
