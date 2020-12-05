@@ -30,12 +30,16 @@ This large section of data in this `mutate()` function is relabelling all of the
 To use the text data, we're going to reformat the 'Dialogue' container from multiple sentences and punctuation to a one word per row format, also called the tidy text approach, dubbed by Hadley Wickham. The function `unnest_tokens()` is useful here, as it automatically parses the data into one word per row. Now, there are 1017 conversations in this dataset, so the dataset `fulltidy` is much longer now. There are a lot of extra things in the data now that aren't useful, so we used an anti_join to eliminate the 'stopwords' as they're called. Stopwords are words that are extremely common and necessary to speech, but don't contain as much information as many of the other words in the set. Some examples include 'you', 'am', 'like' and other common words that don't mean much on their own.
 
 ## Exploratory Data Analysis
+With the newly transformed data, every plot we see will be by word data unless otherwise specified. This is important to remember, because frequency and grouping transformation are all by word level information. Also recall that every plot and calculation henceforth has the stopwords removed, so there aren't any of those in the dataset. 
+The plot has the words organized from most to least common, with the words 'children', 'donate', 'save', 'like', all expected words based on the subject of the conversations. 'like' is an extremely common word to say, especially as a filler word or as a comparison word. Many of the  words on this list are completely expected, subject related words like 'donation' or 'charity' but there are also words like 'help' 'great' 'thank' and words like 'know' 'money'. So which of these words are important? All of them, but the words on this list gain importance when we see how important they are within different groups. 
+Each conversation on average is about 20 turns long. The shortest one was 7 turns long and the longest was 30. Looking at a plot like this, one may wonder why there are so many conversations in the exact 
 
 ### Donations Aside
 <!-- drawing connections but not implications -->
 
 ### Traits and Values
 <!-- explain what each of these metrics are -->
+We have some other very helpful metrics about our group or participants. There is education level, race, age, marital status, and a number of personality variables. The various traits about each person, age, political ideology, religion, all of those were groups that the participants self selected into. They were given a survey and asked to fill in their answer. The personality variables were derived through a series of personality tests. These tests, such as the big five or OCEAN model are along a Likert scale from 1-5, an arbitrary measurement of less to more of a quality. This scale includes five measurements: openness (how spontaneous and open you are to new things), conscientiousness (how disciplines and organized you are), extroversion (how social and people oriented you are), and neuroticism (how anxious and nervous you are). These values are on a continuum in 0.2 sized increments. This particular model is an important part of personality metrics that are increasingly being used to determine receptiveness to advertising, amongst other things. 
 
 ## Rank and Frequency
 
