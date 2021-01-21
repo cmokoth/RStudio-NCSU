@@ -233,7 +233,7 @@ annset %>%
   labs(title = "Show Me the Money", x = "stated donation amount (in USD)",subtitle = "Most people failed to get their partner to verbally commit to a donation amount")
 ```
 
-Not a lot of people planned to donate! Our persuaders may not have been very persuasive. There were a few outliers not represented on this graph, but first let's see how the money acually turned out.
+Not a lot of people planned to donate! Our persuaders may not have been very persuasive. There were a few outliers not represented on this graph, but first let's see how the money actually turned out.
 
 ```{r donations01}
 # difference of intended donation and donation by frequency
@@ -376,7 +376,7 @@ wordcount1 %>%
   labs(title = 'Word Frequency', x = '# of counts per word', y = '# of words',subtitle = 'Many words are said a few times, some words are said a lot')
 ```
 
-So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this phenomenon even more using Zipf's law.
+So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. would is probably seen only once), they won't disrupt the analysis too much. We can look into this phenomenon even more using Zipf's law.
 
 
 ### Zipf's Law

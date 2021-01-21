@@ -1,0 +1,9 @@
+RStudio Mentorship Experience
+
+Working with Dr. Silge was incredible. 
+Her mentoring style was highly interactive. Imagine a mix between live coding and dialogue back and forth, debug in real time (that was very cool, something you don't realize you need to know) and I could learn from asking questions about the process of watching her pull code she knew while exploring tools, options, manuals, and error messages. 
+very explorative, I had just enough guidance to point me in the right direction. 
+I learned a lot about reproducibility, part of my system that I didn't have. 
+Asking questions in this environment was empowering, not 
+All of this is before I learned about text processing. My R journey was largely self taught, and I hadn't realized how much I was missing from my process. 
+The text processing part was really fun, I learned a lot about how to use a ggplot to make some communicative visualizations, and how to decipher text as individual words. Finding patterns in the data is the point of reorganizing data is to understand it. We went through multiple word processes, including regression, and a bunch of new approaches, like tf-idf, and log-odds. Trying to see what the words were telling me was always a struggle though. Text data was unfamiliar to me (despite my English background), but there is a rhythm to trying to understand words in context. That process was helpful for understanding the intuition in analysis

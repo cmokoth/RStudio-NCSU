@@ -1,0 +1,10 @@
+five minute video/abstract for the project
+
+750 words (5000 characters)
+
+Computer text analysis capabilities grow in urgency everyday, as millions of data are created every minute. [sentence] To analyze this data, I examined conversation data from the Persuasion for Good project from MIT, where participants tried to convince another participant that they should donate money to a charity. These data were parsed in R using the tidyr package and contained a lot of identity variables, such as participant OCEAN model scores, gender, religious and political background, and highest level of education. 
+After cleaning these data, I visualized each variable and created frequency plots of the words by each grouping trait ```{r word_frequency01}```. So there are a very high number of words that are used only one time. Some of these words are typos. There isn't a really good way to filter those words out, but since they're rather infrequent (i.e. wuold is probably seen only once), they won't disrupt the analysis too much. We can look into this phenomenon even more using Zipf's law.
+I used Zipf's law to analyze the entire dataset ```{r zipfs_law01}```, then group analysis using tf-idf ```{r tf_idf03}```. The tf-idf approach yielded inconsistent findings. 
+Rather than seeing the predictable popular words included, there were only two words that had no meaning on their own ```{r tfidf03}```. 
+Then I used weighted log-odds to examine the group data further and found [results]```{r lo_role01}```. 
+I followed this with a deep dive into OCEAN model to explore a relationship between personality traits and word frequency ```{r values_open}```. This opportunity was created by the NCSU-RStudio mentorship collaboration, assisted by Professor Marcia Gumpertz of NC State and Dr. Julia Silge of RStudio.
